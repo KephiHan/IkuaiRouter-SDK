@@ -1,3 +1,5 @@
+package pri;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
 import net.dabaiyun.ikuairouter.IkuaiRouter;

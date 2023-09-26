@@ -1,3 +1,5 @@
+import net.dabaiyun.ikuairouter.Entity.LanHostInfo;
+import net.dabaiyun.ikuairouter.Entity.LanHostInfoList;
 import net.dabaiyun.ikuairouter.Entity.NetMapping;
 import net.dabaiyun.ikuairouter.IkuaiRouter;
 import org.junit.Test;
@@ -44,6 +46,9 @@ public class RouterTest2 {
             System.out.println("输入0结束，输入其他再来一次");
             input = scanner.nextLine();
         } while (!input.equals("0"));
+
+        LanHostInfo lanHostInfo = ikuaiRouter.getLanHostInfoByIpAddr("192.168.1.2");
+        System.out.println(lanHostInfo.toString());
     }
 
     @Test
