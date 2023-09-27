@@ -1,5 +1,3 @@
-package pri;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
 import net.dabaiyun.ikuairouter.IkuaiRouter;
@@ -19,8 +17,8 @@ public class RoterTest {
     private final String address = "192.168.77.1";
     private final int port = 8839;
     private final boolean https = true;
-    private final String username = "BayMax";
-    private final String pwd = "gs65stealth9se";
+    private final String username = "admin";
+    private final String pwd = "admin";
 
     @Test
     public void cookieStoreTest() throws Exception {
@@ -28,8 +26,8 @@ public class RoterTest {
                 "192.168.77.1",
                 80,
                 false,
-                "BayMax",
-                "gs65stealth9se"
+                "admin",
+                "admin"
         );
 
         String sess_key = ikuaiRouter.getSessKey();
@@ -40,8 +38,8 @@ public class RoterTest {
                 "192.168.77.1",
                 80,
                 false,
-                "BayMax",
-                "gs65stealth9se",
+                "admin",
+                "admin",
                 sess_key
         );
 
