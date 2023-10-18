@@ -121,7 +121,7 @@ public class IkuaiRouter {
         boolean has_port = false;
         int target_port = -1;
         //获取所有端口映射配置条目
-        List<NetMapping> netMappingList = this.getNetMappingList().getList();
+        List<NetMapping> netMappingList = this.getNetMappingList();
 //        log("获取到NetMapping记录共 " + netMappingList.size() + " 个");
         //遍历查找
         for (int currentPort = portbegin; currentPort <= portend; currentPort++) {
@@ -188,7 +188,7 @@ public class IkuaiRouter {
      */
     public int findAvailableNetMappingPortRegionBegin(int portbegin, int portend, int protnumeachvps) throws Exception {
         //获取所有端口映射表
-        NetMappingList netMappingList = this.getNetMappingList();
+        List<NetMapping> netMappingList = this.getNetMappingList();
         //便利所有可用区间的起始点
         for (
                 int newportbegin = portbegin;
@@ -197,7 +197,7 @@ public class IkuaiRouter {
         ) {
             boolean available = true;
             //遍历所有已存在的端口映射表
-            for (NetMapping netMapping : netMappingList.getList()) {
+            for (NetMapping netMapping : netMappingList) {
 //                System.out.println("正在检查端口映射：" + netMapping.toString());
                 //分割端口区段文本
                 String[] ports = netMapping.getWan_port().split("-");
@@ -277,9 +277,9 @@ public class IkuaiRouter {
             throw new IkuaiRouterException("ip_end " + ip_end + " not in CIDR:  " + gateway + "/" + netmaskBit);
         }
         //获取当前系统已存在配置
-        DHCPHostList dhcpHostList = this.getDHCPHostList();
+        List<DHCPHost> dhcpHostList = this.getDHCPHostList();
 //        System.out.println("Getted DHCPHostList Length: " + dhcpHostList.getList().size());
-        DHCPStaticList dhcpStaticList = this.getDHCPStaticList();
+        List<DHCPStatic> dhcpStaticList = this.getDHCPStaticList();
 //        System.out.println("Getted DHCPStaticList Length: " + dhcpStaticList.getList().size());
         //最终结果IP
         String result_ip = null;
@@ -308,7 +308,7 @@ public class IkuaiRouter {
                         //该ip是否已经被使用标记
                         boolean isUsed = false;
                         //检查是否有主机已使用该ip
-                        for (DHCPHost dhcpHost : dhcpHostList.getList()) {
+                        for (DHCPHost dhcpHost : dhcpHostList) {
 //                            System.out.println("current_dhcpHost: " + dhcpHost.getIp_addr());
                             //如果已经被DHCPHost使用，则标记为已使用，并直接跳出循环
                             if (dhcpHost.getIp_addr().equals(current_ip)) {
@@ -322,7 +322,7 @@ public class IkuaiRouter {
                             continue;
                         }
                         //检查是否已经有该ip的静态分配
-                        for (DHCPStatic dhcpStatic : dhcpStaticList.getList()) {
+                        for (DHCPStatic dhcpStatic : dhcpStaticList) {
 //                            System.out.println("current_dhcpStatic: " + dhcpStatic.getIp_addr());
                             //如果已经被DHCPStatic使用，则标记为已使用，并直接跳出循环
                             if (dhcpStatic.getIp_addr().equals(current_ip)) {
@@ -392,7 +392,7 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public LanHostInfo getLanHostInfoByIpAddr(String ip_addr) throws Exception {
-        for (LanHostInfo o : this.getLanHostInfoList().getList()) {
+        for (LanHostInfo o : this.getLanHostInfoList()) {
             if (o.getIp_addr().equals(ip_addr)) {
                 return o;
             }
@@ -407,7 +407,7 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public LanHostInfo getLanHostInfoByMAC(String mac) throws Exception {
-        for (LanHostInfo o : this.getLanHostInfoList().getList()) {
+        for (LanHostInfo o : this.getLanHostInfoList()) {
             if (o.getMac().equals(mac.toLowerCase())) {
                 return o;
             }
@@ -422,7 +422,7 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public DHCPServer getDHCPServerByInterface(String inter_face) throws Exception {
-        for (DHCPServer dhcpServer : this.getDHCPServerList().getList()) {
+        for (DHCPServer dhcpServer : this.getDHCPServerList()) {
             if (dhcpServer.getInter_face().equals(inter_face)) {
                 return dhcpServer;
             }
@@ -437,7 +437,7 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public DHCPStatic getDHCPStaticById(int id) throws Exception {
-        for (DHCPStatic dhcpStatic : this.getDHCPStaticList().getList()) {
+        for (DHCPStatic dhcpStatic : this.getDHCPStaticList()) {
             if (dhcpStatic.getId() == id) {
                 return dhcpStatic;
             }
@@ -452,7 +452,7 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public DHCPStatic getDHCPStaticByIpAddr(String ip_addr) throws Exception {
-        for (DHCPStatic dhcpStatic : this.getDHCPStaticList().getList()) {
+        for (DHCPStatic dhcpStatic : this.getDHCPStaticList()) {
             if (dhcpStatic.getIp_addr().equals(ip_addr)) {
                 return dhcpStatic;
             }
@@ -467,7 +467,7 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public DHCPStatic getDHCPStaticByMAC(String mac) throws Exception {
-        for (DHCPStatic dhcpStatic : this.getDHCPStaticList().getList()) {
+        for (DHCPStatic dhcpStatic : this.getDHCPStaticList()) {
             if (dhcpStatic.getMac().equals(mac.toLowerCase())) {
                 return dhcpStatic;
             }
@@ -482,7 +482,7 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public QosLimit getQosLimitByIpAddr(String ip_addr) throws Exception {
-        for (QosLimit qosLimit : this.getQosLimitList().getList()) {
+        for (QosLimit qosLimit : this.getQosLimitList()) {
             if (qosLimit.getIp_addr().equals(ip_addr)) {
                 return qosLimit;
             }
@@ -497,7 +497,7 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public QosLimit getQosLimitById(int id) throws Exception {
-        for (QosLimit qosLimit : this.getQosLimitList().getList()) {
+        for (QosLimit qosLimit : this.getQosLimitList()) {
             if (qosLimit.getId() == id) {
                 return qosLimit;
             }
@@ -513,7 +513,7 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public NetMapping getNetMappingById(int id) throws Exception {
-        for (NetMapping netMapping : this.getNetMappingList().getList()) {
+        for (NetMapping netMapping : this.getNetMappingList()) {
             if (netMapping.getId() == id) {
                 return netMapping;
             }
@@ -530,7 +530,7 @@ public class IkuaiRouter {
      */
     public List<NetMapping> getNetMappingByIpAddr(String ipAddr) throws Exception {
         List<NetMapping> netMappingList = new ArrayList<>();
-        for (NetMapping netMapping : this.getNetMappingList().getList()) {
+        for (NetMapping netMapping : this.getNetMappingList()) {
             if (netMapping.getLan_addr().equals(ipAddr)) {
                 netMappingList.add(netMapping);
             }
@@ -546,7 +546,7 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public NetMapping getNetMappingByInterfaceAndWanPort(String inter_face, String wanport) throws Exception {
-        for (NetMapping netMapping : this.getNetMappingList().getList()) {
+        for (NetMapping netMapping : this.getNetMappingList()) {
             if (netMapping.getWan_port().equals(wanport) && netMapping.getInter_face().equals(inter_face)) {
                 return netMapping;
             }
@@ -564,7 +564,7 @@ public class IkuaiRouter {
      */
     public List<NetMapping> getNetMappingListByIpAddr(String ip_addr) throws Exception {
         List<NetMapping> list = new ArrayList<>();
-        for (NetMapping netMapping : this.getNetMappingList().getList()) {
+        for (NetMapping netMapping : this.getNetMappingList()) {
             if (netMapping.getLan_addr().equals(ip_addr)) {
                 list.add(netMapping);
             }
@@ -640,11 +640,7 @@ public class IkuaiRouter {
         //Find dhcpStatic Object by mac then set it id to new Object
         newDhcpStatic.setId(this.getDHCPStaticByMAC(mac).getId());
         IkuaiResponseBase response = routerAgent.editDHCPStatic(newDhcpStatic);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -658,11 +654,7 @@ public class IkuaiRouter {
     public boolean editDHCPStaticByIpAddr(String ip_addr, DHCPStatic newDhcpStatic) throws Exception {
         newDhcpStatic.setId(this.getDHCPStaticByIpAddr(ip_addr).getId());
         IkuaiResponseBase response = routerAgent.editDHCPStatic(newDhcpStatic);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
 //    /**
@@ -692,11 +684,7 @@ public class IkuaiRouter {
      */
     public boolean editDHCPStatic(DHCPStatic newDhcpStatic) throws Exception {
         IkuaiResponseBase response = routerAgent.editDHCPStatic(newDhcpStatic);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -710,11 +698,7 @@ public class IkuaiRouter {
     public boolean editQosLimitByIpAddr(String ip_addr, QosLimit qosLimit) throws Exception {
         qosLimit.setId(this.getQosLimitByIpAddr(ip_addr).getId());
         IkuaiResponseBase response = routerAgent.editQosLimit(qosLimit);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
 //    /**
@@ -744,11 +728,7 @@ public class IkuaiRouter {
      */
     public boolean editQosLimit(QosLimit qosLimit) throws Exception {
         IkuaiResponseBase response = routerAgent.editQosLimit(qosLimit);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -767,11 +747,7 @@ public class IkuaiRouter {
                         wanport).getId()
         );
         IkuaiResponseBase response = routerAgent.editNetMapping(netMapping);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
 //    /**
@@ -801,11 +777,7 @@ public class IkuaiRouter {
      */
     public boolean editNetMapping(NetMapping netMapping) throws Exception {
         IkuaiResponseBase response = routerAgent.editNetMapping(netMapping);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     //================ Downer Functions ==========================
@@ -822,11 +794,7 @@ public class IkuaiRouter {
                 routerAgent.downDHCPStatic(
                         this.getDHCPStaticByMAC(mac).getId()
                 );
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -841,11 +809,7 @@ public class IkuaiRouter {
                 routerAgent.downDHCPStatic(
                         this.getDHCPStaticByIpAddr(ip_addr).getId()
                 );
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -857,11 +821,7 @@ public class IkuaiRouter {
      */
     public boolean downDHCPStatic(DHCPStatic dhcpStatic) throws Exception {
         IkuaiResponseBase response = routerAgent.downDHCPStatic(dhcpStatic.getId());
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -873,11 +833,7 @@ public class IkuaiRouter {
      */
     public boolean downDHCPStaticById(int id) throws Exception {
         IkuaiResponseBase response = routerAgent.downDHCPStatic(id);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -889,11 +845,7 @@ public class IkuaiRouter {
      */
     public boolean downQosLimitById(int id) throws Exception {
         IkuaiResponseBase response = routerAgent.downQosLimit(id);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -908,11 +860,7 @@ public class IkuaiRouter {
                 routerAgent.downQosLimit(
                         this.getQosLimitByIpAddr(ip_addr).getId()
                 );
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -924,11 +872,7 @@ public class IkuaiRouter {
      */
     public boolean downNetMappingById(int id) throws Exception {
         IkuaiResponseBase response = routerAgent.downNetMapping(id);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -943,11 +887,7 @@ public class IkuaiRouter {
         IkuaiResponseBase response = routerAgent.downNetMapping(
                 this.getNetMappingByInterfaceAndWanPort(inter_face, wanport).getId()
         );
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -980,11 +920,7 @@ public class IkuaiRouter {
     public boolean delDHCPStaticById(int id) throws Exception {
         IkuaiResponseBase response =
                 routerAgent.delDHCPStatic(id);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -1003,11 +939,7 @@ public class IkuaiRouter {
                 routerAgent.delDHCPStatic(
                         dhcpStatic.getId()
                 );
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -1026,11 +958,7 @@ public class IkuaiRouter {
                 routerAgent.delDHCPStatic(
                         dhcpStatic.getId()
                 );
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -1042,11 +970,7 @@ public class IkuaiRouter {
      */
     public boolean delQosLimitById(int id) throws Exception {
         IkuaiResponseBase response = routerAgent.delQosLimit(id);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -1063,11 +987,7 @@ public class IkuaiRouter {
         }
         IkuaiResponseBase response =
                 routerAgent.delQosLimit(qosLimit.getId());
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -1079,11 +999,7 @@ public class IkuaiRouter {
      */
     public boolean delNetMappingById(int id) throws Exception {
         IkuaiResponseBase response = routerAgent.delNetMapping(id);
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -1102,11 +1018,7 @@ public class IkuaiRouter {
         IkuaiResponseBase response = routerAgent.delNetMapping(
                 netMapping.getId()
         );
-        if (response.isSuccess()) {
-            return true;
-        } else {
-            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-        }
+        return response.isSuccess();
     }
 
     /**
@@ -1133,128 +1045,131 @@ public class IkuaiRouter {
     /**
      * Get LanHostInfoList Object
      *
-     * @return LanHostInfoList Object
+     * @return LanHostInfo List
      * @throws Exception ex
      */
-    private LanHostInfoList getLanHostInfoList() throws Exception {
+    private List<LanHostInfo> getLanHostInfoList() throws Exception {
         ResponseShow responseShow = routerAgent.getLanHostStatus();
         JsonNode dataNode = objectMapper.readTree(responseShow.getData());
         if (!dataNode.has("data")) {
             throw new IkuaiRouterException("data");
         }
         String arrStr = dataNode.get("data").toString();
-        return new LanHostInfoList(arrStr);
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<LanHostInfo>>() {}
+        );
     }
 
     /**
      * Get InterfaceLanList Object
      *
-     * @return InterfaceLanList Object
+     * @return InterfaceLan List
      * @throws Exception ex
      */
-    private InterfaceLanList getInterfaceLanList() throws Exception {
+    private List<InterfaceLan> getInterfaceLanList() throws Exception {
         ResponseShow responseShow = routerAgent.getInterfaceSnapshoot();
         JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        if (!dataNode.has("snapshoot_lan")) {
-            throw new IkuaiRouterException("snapshoot_lan");
-        }
         String arrStr = dataNode.get("snapshoot_lan").toString();
-        return new InterfaceLanList(arrStr);
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<InterfaceLan>>() {}
+        );
     }
 
     /**
      * Get InterfaceWanList Object
      *
-     * @return InterfaceWanList Object
+     * @return InterfaceWan List
      * @throws Exception ex
      */
-    private InterfaceWanList getInterfaceWanList() throws Exception {
+    private List<InterfaceWan> getInterfaceWanList() throws Exception {
         ResponseShow responseShow = routerAgent.getInterfaceSnapshoot();
         JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        if (!dataNode.has("snapshoot_wan")) {
-            throw new IkuaiRouterException("snapshoot_wan");
-        }
         String arrStr = dataNode.get("snapshoot_wan").toString();
-        return new InterfaceWanList(arrStr);
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<InterfaceWan>>() {}
+        );
     }
 
     /**
      * Get DHCPServerList Object
      *
-     * @return DHCPServerList Object
+     * @return DHCPServer List
      * @throws Exception ex
      */
-    private DHCPServerList getDHCPServerList() throws Exception {
+    private List<DHCPServer> getDHCPServerList() throws Exception {
         ResponseShow responseShow = routerAgent.getDHCPServers();
         JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        if (!dataNode.has("data")) {
-            throw new IkuaiRouterException("data");
-        }
         String arrStr = dataNode.get("data").toString();
-        return new DHCPServerList(arrStr);
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<DHCPServer>>() {}
+        );
     }
 
     /**
      * Get DHCPStaticList Object
      *
-     * @return DHCPStaticList Object
+     * @return DHCPStatic List
      * @throws Exception ex
      */
-    private DHCPStaticList getDHCPStaticList() throws Exception {
+    private List<DHCPStatic> getDHCPStaticList() throws Exception {
         ResponseShow responseShow = routerAgent.getDHCPStatics();
         JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        if (!dataNode.has("static_data")) {
-            throw new IkuaiRouterException("static_data");
-        }
         String arrStr = dataNode.get("static_data").toString();
-        return new DHCPStaticList(arrStr);
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<DHCPStatic>>() {}
+        );
     }
 
     /**
      * Get getDHCPHostList
      *
-     * @return DHCPHostList
+     * @return DHCPHost List
      * @throws Exception ex
      */
-    private DHCPHostList getDHCPHostList() throws Exception {
+    private List<DHCPHost> getDHCPHostList() throws Exception {
         ResponseShow responseShow = routerAgent.getDHCPHosts();
         JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        if (!dataNode.has("data")) {
-            throw new IkuaiRouterException("data");
-        }
         String arrStr = dataNode.get("data").toString();
-        return new DHCPHostList(arrStr);
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<DHCPHost>>() {}
+        );
     }
 
     /**
-     * Get NetMappingList Object
+     * Get NetMappingList
      *
-     * @return NetMappingList Object
+     * @return NetMapping List
      * @throws Exception ex
      */
-    private NetMappingList getNetMappingList() throws Exception {
+    private List<NetMapping> getNetMappingList() throws Exception {
         ResponseShow responseShow = routerAgent.getNetMapping();
         JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        if (!dataNode.has("data")) {
-            throw new IkuaiRouterException("data");
-        }
         String arrStr = dataNode.get("data").toString();
-        return new NetMappingList(arrStr);
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<NetMapping>>() {}
+        );
     }
 
     /**
-     * Get QosLimitList Object
+     * Get QosLimit Object
      *
-     * @return QosLimitList Object
+     * @return QosLimit List
      * @throws Exception ex
      */
-    private QosLimitList getQosLimitList() throws Exception {
+    private List<QosLimit> getQosLimitList() throws Exception {
         ResponseShow responseShow = routerAgent.getQosLimit();
         JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        if (!dataNode.has("data")) {
-            throw new IkuaiRouterException("data");
-        }
         String arrStr = dataNode.get("data").toString();
-        return new QosLimitList(arrStr);
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<QosLimit>>() {}
+        );
     }
 }

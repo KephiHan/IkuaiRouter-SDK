@@ -8,45 +8,22 @@ import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
 
 public class ResponseShow extends IkuaiResponseBase {
 
-    //    private int Result;
-//    private String ErrMsg;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     @JsonProperty("Data")
     private String Data;
-
-    /**
-     * Generate Fields By JSON Data
-     *
-     * @param jsonStr JSON String
-     * @throws Exception IkuaiPostException, JsonProcessingException
-     */
-    public void generateFieldsByJsonString(String jsonStr) throws Exception {
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode rootNode = objectMapper.readTree(jsonStr);
-        //Result
-        if (rootNode.has("Result")) {
-            super.setResult(rootNode.get("Result").asInt());
-        } else {
-            throw new IkuaiRouterException("Result");
-        }
-        //ErrMsg
-        if (rootNode.has("ErrMsg")) {
-            super.setErrMsg(rootNode.get("ErrMsg").asText());
-        } else {
-            throw new IkuaiRouterException("ErrMsg");
-        }
-        //Data
-        if (rootNode.has("Data")) {
-            Data = rootNode.get("Data").toString();
-        } else {
-            throw new IkuaiRouterException("Data");
-        }
-    }
 
     public ResponseShow() {
     }
 
     public ResponseShow(String jsonStr) throws Exception {
-        generateFieldsByJsonString(jsonStr);
+        JsonNode rootNode = objectMapper.readTree(jsonStr);
+        //Result
+        super.setResult(rootNode.get("Result").asInt());
+        //ErrMsg
+        super.setErrMsg(rootNode.get("ErrMsg").asText());
+        //Data
+        this.Data = rootNode.get("Data").toString();
     }
 
     public ResponseShow(int result, String errMsg, String data) {

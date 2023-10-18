@@ -1,5 +1,4 @@
 import net.dabaiyun.ikuairouter.Entity.LanHostInfo;
-import net.dabaiyun.ikuairouter.Entity.LanHostInfoList;
 import net.dabaiyun.ikuairouter.Entity.NetMapping;
 import net.dabaiyun.ikuairouter.IkuaiRouter;
 import org.junit.Test;
