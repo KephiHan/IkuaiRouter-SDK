@@ -18,7 +18,7 @@ public class RoterTest {
     private final int port = 8839;
     private final boolean https = true;
     private final String username = "BayMax";
-    private final String pwd = "gs65stealth9se";
+    private final String pwd = "password";
 
     @Test
     public void cookieStoreTest() throws Exception {
