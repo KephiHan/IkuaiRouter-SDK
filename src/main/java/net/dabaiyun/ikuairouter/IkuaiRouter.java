@@ -77,9 +77,13 @@ public class IkuaiRouter {
         return responseShow.getData();
     }
 
-    public boolean checkSessKeyValid() throws Exception {
-        ResponseShow responseShow = routerAgent.getPlugins();
-        return !responseShow.isAuthFail();
+    public boolean checkSessKeyValid() {
+        try {
+            routerAgent.getPlugins();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     //=========== Base Functions ====================

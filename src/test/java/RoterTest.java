@@ -17,8 +17,8 @@ public class RoterTest {
     private final String address = "192.168.77.1";
     private final int port = 8839;
     private final boolean https = true;
-    private final String username = "admin";
-    private final String pwd = "admin";
+    private final String username = "BayMax";
+    private final String pwd = "gs65stealth9se";
 
     @Test
     public void cookieStoreTest() throws Exception {
@@ -52,6 +52,20 @@ public class RoterTest {
                 )
         );
 
+    }
+
+    @Test
+    public void qosLimitTest() throws Exception {
+        IkuaiRouter ikuaiRouter = new IkuaiRouter(
+                address,
+                port,
+                https,
+                username,
+                pwd
+        );
+        System.out.println(
+                ikuaiRouter.getQosLimitByIpAddr("10.1.0.41")
+        );
     }
 
     @Test
@@ -165,7 +179,7 @@ public class RoterTest {
                 username,
                 pwd
         );
-        System.out.println(ikuaiRouter.getLanHostInfoByMAC("C8:09:A8:57:08:5A"));
+        System.out.println(ikuaiRouter.getLanHostInfoByIpAddr("192.168.77.6"));
     }
 
     @Test
