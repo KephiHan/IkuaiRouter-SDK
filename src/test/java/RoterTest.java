@@ -17,8 +17,25 @@ public class RoterTest {
     private final String address = "192.168.77.1";
     private final int port = 8839;
     private final boolean https = true;
-    private final String username = "BayMax";
-    private final String pwd = "password";
+    private final String username = "admin";
+    private final String pwd = "123456";
+
+    @Test
+    public void portInUseTest() throws Exception {
+        IkuaiRouter ikuaiRouter = new IkuaiRouter(
+                address,
+                port,
+                https,
+                username,
+                pwd
+        );
+        System.out.println(
+                ikuaiRouter.isWanPortInUse(
+                        "adsl2",
+                        30323
+                )
+        );
+    }
 
     @Test
     public void cookieStoreTest() throws Exception {
@@ -84,6 +101,7 @@ public class RoterTest {
 
     @Test
     public void findWanPortTest() throws Exception {
+        long time_begin = System.currentTimeMillis();
         IkuaiRouter ikuaiRouter = new IkuaiRouter(
                 address,
                 port,
@@ -91,7 +109,6 @@ public class RoterTest {
                 username,
                 pwd
         );
-        long time_begin = System.currentTimeMillis();
         System.out.println(ikuaiRouter.findAvailableNetMappingWanPort("adsl2",30000,31000));
         long time_end = System.currentTimeMillis();
         System.out.println(" Time : " + (time_end - time_begin) + "ms");

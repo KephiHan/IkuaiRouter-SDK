@@ -99,11 +99,61 @@ public class IkuaiRouter {
         return this.isLogin;
     }
 
-    public String getSessKey(){
+    public String getSessKey() {
         return routerAgent.getSessKey();
     }
 
     //Custom Functions
+
+    /**
+     * 查询公网端口是否被使用
+     *
+     * @param inter_face WAN接口
+     * @param wanPort    端口
+     * @return 是否被使用
+     * @throws Exception ex
+     */
+    public boolean isWanPortInUse(String inter_face, int wanPort) throws Exception {
+        //获取所有端口映射配置条目
+        List<NetMapping> netMappingList = this.getNetMappingList();
+        //遍历查找
+        for (NetMapping netMapping : netMappingList) {
+            //检查是否符合上行接口
+            if (!netMapping.getInter_face().equals(inter_face)) {
+                //不符合上行接口的配置直接忽略
+//                    log("上行接口：" + netMapping.getInter_face() + " 不符合，跳过");
+                continue;
+            }
+            //对范围端口进行处理
+//            System.out.println("处理配置字符串：" + netMapping.getWan_port());
+            //按逗号分隔多段配置
+            String[] ports_str = netMapping.getWan_port().split(",");
+            //处理每一段端口
+            for (String s : ports_str) {
+//                System.out.println("处理配置字符串：" + s);
+                String[] portRange_str = s.split("-");
+                //如果是单个端口
+                if (portRange_str.length == 1) {
+//                    System.out.println("单个端口：" + portRange_str[0]);
+                    //判断是否和currentPort相同
+                    if (Integer.parseInt(portRange_str[0]) == wanPort) {
+//                        System.out.println("当前端口：" + wanPort + " 已使用");
+                        return true;
+                    }
+                }
+                //如果是端口范围
+                if (portRange_str.length == 2) {
+//                    System.out.println("范围端口：" + portRange_str[0] + " - " + portRange_str[1]);
+                    //当前端口处于范围内
+                    if ((wanPort >= Integer.parseInt(portRange_str[0]) && wanPort <= Integer.parseInt(portRange_str[1]))) {
+//                        System.out.println("当前端口：" + wanPort + " 已使用");
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
     /**
      * 查找可用公网端口
@@ -384,7 +434,8 @@ public class IkuaiRouter {
         String arrStr = dataNode.get("sysstat").toString();
         return objectMapper.readValue(
                 arrStr,
-                new TypeReference<SystemStatus>() {}
+                new TypeReference<SystemStatus>() {
+                }
         );
     }
 
@@ -1061,7 +1112,8 @@ public class IkuaiRouter {
         String arrStr = dataNode.get("data").toString();
         return objectMapper.readValue(
                 arrStr,
-                new TypeReference<List<LanHostInfo>>() {}
+                new TypeReference<List<LanHostInfo>>() {
+                }
         );
     }
 
@@ -1077,7 +1129,8 @@ public class IkuaiRouter {
         String arrStr = dataNode.get("snapshoot_lan").toString();
         return objectMapper.readValue(
                 arrStr,
-                new TypeReference<List<InterfaceLan>>() {}
+                new TypeReference<List<InterfaceLan>>() {
+                }
         );
     }
 
@@ -1093,7 +1146,8 @@ public class IkuaiRouter {
         String arrStr = dataNode.get("snapshoot_wan").toString();
         return objectMapper.readValue(
                 arrStr,
-                new TypeReference<List<InterfaceWan>>() {}
+                new TypeReference<List<InterfaceWan>>() {
+                }
         );
     }
 
@@ -1109,7 +1163,8 @@ public class IkuaiRouter {
         String arrStr = dataNode.get("data").toString();
         return objectMapper.readValue(
                 arrStr,
-                new TypeReference<List<DHCPServer>>() {}
+                new TypeReference<List<DHCPServer>>() {
+                }
         );
     }
 
@@ -1125,7 +1180,8 @@ public class IkuaiRouter {
         String arrStr = dataNode.get("static_data").toString();
         return objectMapper.readValue(
                 arrStr,
-                new TypeReference<List<DHCPStatic>>() {}
+                new TypeReference<List<DHCPStatic>>() {
+                }
         );
     }
 
@@ -1141,7 +1197,8 @@ public class IkuaiRouter {
         String arrStr = dataNode.get("data").toString();
         return objectMapper.readValue(
                 arrStr,
-                new TypeReference<List<DHCPHost>>() {}
+                new TypeReference<List<DHCPHost>>() {
+                }
         );
     }
 
@@ -1157,7 +1214,8 @@ public class IkuaiRouter {
         String arrStr = dataNode.get("data").toString();
         return objectMapper.readValue(
                 arrStr,
-                new TypeReference<List<NetMapping>>() {}
+                new TypeReference<List<NetMapping>>() {
+                }
         );
     }
 
@@ -1173,7 +1231,8 @@ public class IkuaiRouter {
         String arrStr = dataNode.get("data").toString();
         return objectMapper.readValue(
                 arrStr,
-                new TypeReference<List<QosLimit>>() {}
+                new TypeReference<List<QosLimit>>() {
+                }
         );
     }
 }
