@@ -285,6 +285,18 @@ public class RouterAgent {
     }
 
     /**
+     * Get DHCPhosts list
+     * @return jsonString
+     * @throws Exception
+     */
+    public ResponseShow getDHCPHosts() throws Exception{
+        //Params Object
+        RequestParamShow param = new RequestParamShow("data");
+        //do post
+        return new ResponseShow(executeAction(ActionType.show, FuncName.dhcp_lease, param));
+    }
+
+    /**
      * Get DHCPStaticList
      *
      * @return DHCPStaticList jsonString
@@ -298,15 +310,74 @@ public class RouterAgent {
     }
 
     /**
-     * Get DHCPhosts list
-     * @return jsonString
-     * @throws Exception
+     * Get DHCPStaticList
+     *
+     * @return DHCPStaticList jsonString
+     * @throws Exception ex
      */
-    public ResponseShow getDHCPHosts() throws Exception{
+    public ResponseShow getDHCPStaticsById(String id) throws Exception {
         //Params Object
-        RequestParamShow param = new RequestParamShow("data");
+        RequestParamFind param = new RequestParamFind("static_data");
+        param.setFinds(RequestParamFind.FINDS_ID);
+        param.setKeywords(id);
         //do post
         return new ResponseShow(executeAction(ActionType.show, FuncName.dhcp_lease, param));
+    }
+
+    /**
+     * Get DHCPStaticList
+     *
+     * @return DHCPStaticList jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getDHCPStaticsByIpAddr(String ip_addr) throws Exception {
+        //Params Object
+        RequestParamFind param = new RequestParamFind("static_data");
+        param.setFinds(RequestParamFind.FINDS_IP_ADDR);
+        param.setKeywords(ip_addr);
+        //do post
+        return new ResponseShow(executeAction(ActionType.show, FuncName.dhcp_lease, param));
+    }
+
+    /**
+     * Get DHCPStaticList
+     *
+     * @return DHCPStaticList jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getDHCPStaticsByMac(String mac) throws Exception {
+        //Params Object
+        RequestParamFind param = new RequestParamFind("static_data");
+        param.setFinds(RequestParamFind.FINDS_MAC);
+        param.setKeywords(mac);
+        //do post
+        return new ResponseShow(executeAction(ActionType.show, FuncName.dhcp_lease, param));
+    }
+
+    /**
+     * Get QosLimitList
+     *
+     * @return QosLimitList jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getQosLimitById(String id) throws Exception {
+        RequestParamFind param = new RequestParamFind("data");
+        param.setFinds(RequestParamFind.FINDS_ID);
+        param.setKeywords(id);
+        return new ResponseShow(executeAction(ActionType.show,FuncName.simple_qos,param));
+    }
+
+    /**
+     * Get QosLimitList
+     *
+     * @return QosLimitList jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getQosLimitByIpAddr(String ip_addr) throws Exception {
+        RequestParamFind param = new RequestParamFind("data");
+        param.setFinds(RequestParamFind.FINDS_IP_ADDR);
+        param.setKeywords(ip_addr);
+        return new ResponseShow(executeAction(ActionType.show,FuncName.simple_qos,param));
     }
 
     /**
@@ -323,14 +394,66 @@ public class RouterAgent {
     }
 
     /**
-     * Get QosLimitList
+     * Get NetMappingList
      *
-     * @return QosLimitList jsonString
+     * @return NetMappingList jsonString
      * @throws Exception ex
      */
-    public ResponseShow getQosLimit() throws Exception {
-        RequestParamShow param = new RequestParamShow("data");
-        return new ResponseShow(executeAction(ActionType.show,FuncName.simple_qos,param));
+    public ResponseShow getNetMappingById(String id) throws Exception {
+        //Params Object
+        RequestParamFind param = new RequestParamFind("data");
+        param.setFinds(RequestParamFind.FINDS_ID);
+        param.setKeywords(id);
+        //do post
+        return new ResponseShow(executeAction(ActionType.show, FuncName.dnat, param));
+    }
+
+    /**
+     * Get NetMappingList
+     *
+     * @param ip_addr ID Address
+     * @return NetMappingList jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getNetMappingByIpAddr(String ip_addr) throws Exception {
+        //Params Object
+        RequestParamFind param = new RequestParamFind("data");
+        param.setFinds(RequestParamFind.FINDS_LAN_ADDR);
+        param.setKeywords(ip_addr);
+        //do post
+        return new ResponseShow(executeAction(ActionType.show, FuncName.dnat, param));
+    }
+
+    /**
+     * Get NetMappingList
+     *
+     * @param wan_port WAN Port
+     * @return NetMappingList jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getNetMappingByWanPort(String wan_port) throws Exception {
+        //Params Object
+        RequestParamFind param = new RequestParamFind("data");
+        param.setFinds(RequestParamFind.FINDS_WAN_PORT);
+        param.setKeywords(wan_port);
+        //do post
+        return new ResponseShow(executeAction(ActionType.show, FuncName.dnat, param));
+    }
+
+    /**
+     * Get NetMappingList
+     *
+     * @param inter_face Interface
+     * @return NetMappingList jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getNetMappingByInterface(String inter_face) throws Exception {
+        //Params Object
+        RequestParamFind param = new RequestParamFind("data");
+        param.setFinds(RequestParamFind.FINDS_INTERFACE);
+        param.setKeywords(inter_face);
+        //do post
+        return new ResponseShow(executeAction(ActionType.show, FuncName.dnat, param));
     }
 
 

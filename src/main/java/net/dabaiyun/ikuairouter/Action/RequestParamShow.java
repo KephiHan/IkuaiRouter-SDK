@@ -11,41 +11,41 @@ public class RequestParamShow {
     @JsonProperty("limit")
     private String limit;
     @JsonProperty("ORDER")
-    private String ORDER;
+    private String order;
     @JsonProperty("ORDER_BY")
-    private String ORDER_BY;
+    private String orderBy;
     @JsonProperty("TYPE")
-    private String TYPE;
+    private String type;
 
     public RequestParamShow() {
     }
 
-    public RequestParamShow(String TYPE) {
+    public RequestParamShow(String type) {
         this.limit = "0,1000";
-        this.ORDER = "";
-        this.ORDER_BY = "";
-        this.TYPE = TYPE;
+        this.order = "";
+        this.orderBy = "";
+        this.type = type;
     }
 
-    public RequestParamShow(boolean isDefaultParams) {
-        if(isDefaultParams){
-            this.limit = "0,100";
-            this.ORDER = "";
-            this.ORDER_BY = "";
-            this.TYPE = "data";
-        }else{
-            this.limit = "";
-            this.ORDER = "";
-            this.ORDER_BY = "";
-            this.TYPE = "";
-        }
-    }
+//    public RequestParamShow(boolean isDefaultParams) {
+//        if(isDefaultParams){
+//            this.limit = "0,100";
+//            this.order = "";
+//            this.orderBy = "";
+//            this.type = "data";
+//        }else{
+//            this.limit = "";
+//            this.order = "";
+//            this.orderBy = "";
+//            this.type = "";
+//        }
+//    }
 
-    public RequestParamShow(String limit, String ORDER, String ORDER_BY, String TYPE) {
+    public RequestParamShow(String limit, String order, String orderBy, String type) {
         this.limit = limit;
-        this.ORDER = ORDER;
-        this.ORDER_BY = ORDER_BY;
-        this.TYPE = TYPE;
+        this.order = order;
+        this.orderBy = orderBy;
+        this.type = type;
     }
 
     public String getLimit() {
@@ -56,27 +56,27 @@ public class RequestParamShow {
         this.limit = limit;
     }
 
-    public String getORDER() {
-        return ORDER;
+    public String getOrder() {
+        return order;
     }
 
-    public void setORDER(String ORDER) {
-        this.ORDER = ORDER;
+    public void setOrder(String order) {
+        this.order = order;
     }
 
-    public String getORDER_BY() {
-        return ORDER_BY;
+    public String getOrderBy() {
+        return orderBy;
     }
 
-    public void setORDER_BY(String ORDER_BY) {
-        this.ORDER_BY = ORDER_BY;
+    public void setOrderBy(String orderBy) {
+        this.orderBy = orderBy;
     }
 
-    public String getTYPE() {
-        return TYPE;
+    public String getType() {
+        return type;
     }
 
-    public void setTYPE(String TYPE) {
-        this.TYPE = TYPE;
+    public void setType(String type) {
+        this.type = type;
     }
 }

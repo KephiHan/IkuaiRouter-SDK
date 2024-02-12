@@ -12,6 +12,7 @@ import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
 import net.dabaiyun.ikuairouter.Util.IpAddrUtil;
 import okhttp3.Cookie;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -276,13 +277,6 @@ public class IkuaiRouter {
         throw new IkuaiRouterException("Can not find Available natmapping port");
     }
 
-//    private Integer getIpNumberByIp(String ipaddr){
-//        String[] strlist = ipaddr.split("\\.");
-//        if(strlist.length < 4){
-//            return 0;
-//        }
-//        return Integer.parseInt(strlist[3]);
-//    }
 
     /**
      * 需按照一个没有呗使用的ip
@@ -492,8 +486,15 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public DHCPStatic getDHCPStaticById(int id) throws Exception {
-        for (DHCPStatic dhcpStatic : this.getDHCPStaticList()) {
-            if (dhcpStatic.getId() == id) {
+        ResponseShow responseShow = routerAgent.getDHCPStaticsById(String.valueOf(id));
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("static_data").toString();
+        List<DHCPStatic> dhcpStaticList = objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<DHCPStatic>>() {}
+        );
+        for (DHCPStatic dhcpStatic : dhcpStaticList) {
+            if(dhcpStatic.getId() == id){
                 return dhcpStatic;
             }
         }
@@ -507,8 +508,15 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public DHCPStatic getDHCPStaticByIpAddr(String ip_addr) throws Exception {
-        for (DHCPStatic dhcpStatic : this.getDHCPStaticList()) {
-            if (dhcpStatic.getIp_addr().equals(ip_addr)) {
+        ResponseShow responseShow = routerAgent.getDHCPStaticsByIpAddr(ip_addr);
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("static_data").toString();
+        List<DHCPStatic> dhcpStaticList = objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<DHCPStatic>>() {}
+        );
+        for (DHCPStatic dhcpStatic : dhcpStaticList) {
+            if(dhcpStatic.getIp_addr().equals(ip_addr)){
                 return dhcpStatic;
             }
         }
@@ -522,24 +530,16 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public DHCPStatic getDHCPStaticByMAC(String mac) throws Exception {
-        for (DHCPStatic dhcpStatic : this.getDHCPStaticList()) {
-            if (dhcpStatic.getMac().equals(mac.toLowerCase())) {
+        ResponseShow responseShow = routerAgent.getDHCPStaticsByMac(mac);
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("static_data").toString();
+        List<DHCPStatic> dhcpStaticList = objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<DHCPStatic>>() {}
+        );
+        for (DHCPStatic dhcpStatic : dhcpStaticList) {
+            if(dhcpStatic.getMac().equals(mac)){
                 return dhcpStatic;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Get QosLimit Object By ip
-     *
-     * @param ip_addr ipv4 String
-     * @return Macthing Object
-     */
-    public QosLimit getQosLimitByIpAddr(String ip_addr) throws Exception {
-        for (QosLimit qosLimit : this.getQosLimitList()) {
-            if (qosLimit.getIp_addr().equals(ip_addr)) {
-                return qosLimit;
             }
         }
         return null;
@@ -552,8 +552,37 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public QosLimit getQosLimitById(int id) throws Exception {
-        for (QosLimit qosLimit : this.getQosLimitList()) {
+        ResponseShow responseShow = routerAgent.getQosLimitById(String.valueOf(id));
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("data").toString();
+        List<QosLimit> qosLimitList = objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<QosLimit>>() {}
+        );
+        for (QosLimit qosLimit : qosLimitList) {
             if (qosLimit.getId() == id) {
+                return qosLimit;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get QosLimit Object By ip
+     *
+     * @param ip_addr ipv4 String
+     * @return Macthing Object
+     */
+    public QosLimit getQosLimitByIpAddr(String ip_addr) throws Exception {
+        ResponseShow responseShow = routerAgent.getQosLimitByIpAddr(ip_addr);
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("data").toString();
+        List<QosLimit> qosLimitList = objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<QosLimit>>() {}
+        );
+        for (QosLimit qosLimit : qosLimitList) {
+            if (qosLimit.getIp_addr().equals(ip_addr)) {
                 return qosLimit;
             }
         }
@@ -568,7 +597,14 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public NetMapping getNetMappingById(int id) throws Exception {
-        for (NetMapping netMapping : this.getNetMappingList()) {
+        ResponseShow responseShow = routerAgent.getNetMappingById(String.valueOf(id));
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("data").toString();
+        List<NetMapping> netMappingList = objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<NetMapping>>(){}
+        );
+        for (NetMapping netMapping : netMappingList) {
             if (netMapping.getId() == id) {
                 return netMapping;
             }
@@ -577,20 +613,27 @@ public class IkuaiRouter {
     }
 
     /**
-     * Get NetMapping By IP_Addr
+     * Get NetMappingList By IpAddr
      *
-     * @param ipAddr ipaddress
-     * @return NetMapping Object List
-     * @throws Exception e
+     * @param ip_addr IpAddr
+     * @return Matching Object List
+     * @throws Exception E
      */
-    public List<NetMapping> getNetMappingByIpAddr(String ipAddr) throws Exception {
-        List<NetMapping> netMappingList = new ArrayList<>();
-        for (NetMapping netMapping : this.getNetMappingList()) {
-            if (netMapping.getLan_addr().equals(ipAddr)) {
-                netMappingList.add(netMapping);
+    public List<NetMapping> getNetMappingListByIpAddr(String ip_addr) throws Exception {
+        ResponseShow responseShow = routerAgent.getNetMappingByIpAddr(ip_addr);
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("data").toString();
+        List<NetMapping> netMappingList = objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<NetMapping>>(){}
+        );
+        List<NetMapping> matchList = new ArrayList<>();
+        for (NetMapping netMapping : netMappingList) {
+            if(netMapping.getLan_addr().equals(ip_addr)){
+                matchList.add(netMapping);
             }
         }
-        return netMappingList;
+        return matchList;
     }
 
     /**
@@ -601,30 +644,19 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public NetMapping getNetMappingByInterfaceAndWanPort(String inter_face, String wanport) throws Exception {
-        for (NetMapping netMapping : this.getNetMappingList()) {
+        ResponseShow responseShow = routerAgent.getNetMappingByWanPort(wanport);
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("data").toString();
+        List<NetMapping> netMappingList = objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<NetMapping>>() {}
+        );
+        for (NetMapping netMapping : netMappingList) {
             if (netMapping.getWan_port().equals(wanport) && netMapping.getInter_face().equals(inter_face)) {
                 return netMapping;
             }
         }
         return null;
-    }
-
-    /**
-     * Get NetMappingList By IpAddr
-     * More than one rules can be set to same lan_ip
-     *
-     * @param ip_addr IpAddr
-     * @return Matching Object List
-     * @throws Exception E
-     */
-    public List<NetMapping> getNetMappingListByIpAddr(String ip_addr) throws Exception {
-        List<NetMapping> list = new ArrayList<>();
-        for (NetMapping netMapping : this.getNetMappingList()) {
-            if (netMapping.getLan_addr().equals(ip_addr)) {
-                list.add(netMapping);
-            }
-        }
-        return list;
     }
 
     //================ Adder Functions ==========================
@@ -683,34 +715,34 @@ public class IkuaiRouter {
 
     //================ Editer Functions ==========================
 
-    /**
-     * Edit DHCPStatic by MAC
-     *
-     * @param mac           Target MAC
-     * @param newDhcpStatic New DHCPStatic Object
-     * @return Add seccess? throw ErrMsg
-     * @throws Exception ErrMsg
-     */
-    public boolean editDHCPStaticByMac(String mac, DHCPStatic newDhcpStatic) throws Exception {
-        //Find dhcpStatic Object by mac then set it id to new Object
-        newDhcpStatic.setId(this.getDHCPStaticByMAC(mac).getId());
-        IkuaiResponseBase response = routerAgent.editDHCPStatic(newDhcpStatic);
-        return response.isSuccess();
-    }
+//    /**
+//     * Edit DHCPStatic by MAC
+//     *
+//     * @param mac           Target MAC
+//     * @param newDhcpStatic New DHCPStatic Object
+//     * @return Add seccess? throw ErrMsg
+//     * @throws Exception ErrMsg
+//     */
+//    public boolean editDHCPStaticByMac(String mac, DHCPStatic newDhcpStatic) throws Exception {
+//        //Find dhcpStatic Object by mac then set it id to new Object
+//        newDhcpStatic.setId(this.getDHCPStaticByMAC(mac).getId());
+//        IkuaiResponseBase response = routerAgent.editDHCPStatic(newDhcpStatic);
+//        return response.isSuccess();
+//    }
 
-    /**
-     * Edit DHCPStatic by ipv4
-     *
-     * @param ip_addr       Target ipv4
-     * @param newDhcpStatic New DHCPStatic Object
-     * @return Add seccess? throw ErrMsg
-     * @throws Exception ErrMsg
-     */
-    public boolean editDHCPStaticByIpAddr(String ip_addr, DHCPStatic newDhcpStatic) throws Exception {
-        newDhcpStatic.setId(this.getDHCPStaticByIpAddr(ip_addr).getId());
-        IkuaiResponseBase response = routerAgent.editDHCPStatic(newDhcpStatic);
-        return response.isSuccess();
-    }
+//    /**
+//     * Edit DHCPStatic by ipv4
+//     *
+//     * @param ip_addr       Target ipv4
+//     * @param newDhcpStatic New DHCPStatic Object
+//     * @return Add seccess? throw ErrMsg
+//     * @throws Exception ErrMsg
+//     */
+//    public boolean editDHCPStaticByIpAddr(String ip_addr, DHCPStatic newDhcpStatic) throws Exception {
+//        newDhcpStatic.setId(this.getDHCPStaticByIpAddr(ip_addr).getId());
+//        IkuaiResponseBase response = routerAgent.editDHCPStatic(newDhcpStatic);
+//        return response.isSuccess();
+//    }
 
 //    /**
 //     * Edit DHCPStatic by ID
@@ -733,45 +765,27 @@ public class IkuaiRouter {
     /**
      * Edit DHCPStatic
      *
-     * @param newDhcpStatic New DHCPStatic Object
+     * @param dhcpStatic New DHCPStatic Object
      * @return Add seccess? throw ErrMsg
      * @throws Exception ErrMsg
      */
-    public boolean editDHCPStatic(DHCPStatic newDhcpStatic) throws Exception {
-        IkuaiResponseBase response = routerAgent.editDHCPStatic(newDhcpStatic);
-        return response.isSuccess();
-    }
-
-    /**
-     * Edit QosLimit by ip_addr
-     *
-     * @param ip_addr  Target ip_addr
-     * @param qosLimit New QosLimit Object
-     * @return Add seccess? throw ErrMsg
-     * @throws Exception ErrMsg
-     */
-    public boolean editQosLimitByIpAddr(String ip_addr, QosLimit qosLimit) throws Exception {
-        qosLimit.setId(this.getQosLimitByIpAddr(ip_addr).getId());
-        IkuaiResponseBase response = routerAgent.editQosLimit(qosLimit);
+    public boolean editDHCPStatic(DHCPStatic dhcpStatic) throws Exception {
+        IkuaiResponseBase response = routerAgent.editDHCPStatic(dhcpStatic);
         return response.isSuccess();
     }
 
 //    /**
-//     * Edit QosLimit by ID
+//     * Edit QosLimit by ip_addr
 //     *
-//     * @param id       Target id
+//     * @param ip_addr  Target ip_addr
 //     * @param qosLimit New QosLimit Object
 //     * @return Add seccess? throw ErrMsg
 //     * @throws Exception ErrMsg
 //     */
-//    public boolean editQosLimitById(int id, QosLimit qosLimit) throws Exception {
-//        qosLimit.setId(id);
+//    public boolean editQosLimitByIpAddr(String ip_addr, QosLimit qosLimit) throws Exception {
+//        qosLimit.setId(this.getQosLimitByIpAddr(ip_addr).getId());
 //        IkuaiResponseBase response = routerAgent.editQosLimit(qosLimit);
-//        if (response.isSeccess()) {
-//            return true;
-//        } else {
-//            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-//        }
+//        return response.isSuccess();
 //    }
 
     /**
@@ -786,41 +800,23 @@ public class IkuaiRouter {
         return response.isSuccess();
     }
 
-    /**
-     * Edit NetMapping By Interface And Wanport
-     *
-     * @param inter_face Interface
-     * @param wanport    Wanport
-     * @param netMapping New NetMapping Object
-     * @return Edit seccess? throw ErrMsg
-     * @throws Exception e
-     */
-    public boolean editNetMappingByInterfaceAndWanport(String inter_face, String wanport, NetMapping netMapping) throws Exception {
-        netMapping.setId(
-                this.getNetMappingByInterfaceAndWanPort(
-                        inter_face,
-                        wanport).getId()
-        );
-        IkuaiResponseBase response = routerAgent.editNetMapping(netMapping);
-        return response.isSuccess();
-    }
-
 //    /**
-//     * Edit NetMapping by ID
+//     * Edit NetMapping By Interface And Wanport
 //     *
-//     * @param id         Target id
+//     * @param inter_face Interface
+//     * @param wanport    Wanport
 //     * @param netMapping New NetMapping Object
-//     * @return Add seccess? throw ErrMsg
-//     * @throws Exception ErrMsg
+//     * @return Edit seccess? throw ErrMsg
+//     * @throws Exception e
 //     */
-//    public boolean editNetMappingById(int id, NetMapping netMapping) throws Exception {
-//        netMapping.setId(id);
+//    public boolean editNetMappingByInterfaceAndWanport(String inter_face, String wanport, NetMapping netMapping) throws Exception {
+//        netMapping.setId(
+//                this.getNetMappingByInterfaceAndWanPort(
+//                        inter_face,
+//                        wanport).getId()
+//        );
 //        IkuaiResponseBase response = routerAgent.editNetMapping(netMapping);
-//        if (response.isSeccess()) {
-//            return true;
-//        } else {
-//            throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
-//        }
+//        return response.isSuccess();
 //    }
 
     /**
@@ -864,18 +860,6 @@ public class IkuaiRouter {
                 routerAgent.downDHCPStatic(
                         this.getDHCPStaticByIpAddr(ip_addr).getId()
                 );
-        return response.isSuccess();
-    }
-
-    /**
-     * Down DHCPStatic By Object
-     *
-     * @param dhcpStatic Target Obj
-     * @return Add seccess? throw ErrMsg
-     * @throws Exception ErrMsg
-     */
-    public boolean downDHCPStatic(DHCPStatic dhcpStatic) throws Exception {
-        IkuaiResponseBase response = routerAgent.downDHCPStatic(dhcpStatic.getId());
         return response.isSuccess();
     }
 
@@ -1219,20 +1203,4 @@ public class IkuaiRouter {
         );
     }
 
-    /**
-     * Get QosLimit Object
-     *
-     * @return QosLimit List
-     * @throws Exception ex
-     */
-    private List<QosLimit> getQosLimitList() throws Exception {
-        ResponseShow responseShow = routerAgent.getQosLimit();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        return objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<QosLimit>>() {
-                }
-        );
-    }
 }

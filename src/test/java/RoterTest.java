@@ -1,4 +1,9 @@
 import com.fasterxml.jackson.databind.ObjectMapper;
+import net.dabaiyun.ikuairouter.Action.ActionType;
+import net.dabaiyun.ikuairouter.Action.FuncName;
+import net.dabaiyun.ikuairouter.Action.RequestParamFind;
+import net.dabaiyun.ikuairouter.Action.ResponseShow;
+import net.dabaiyun.ikuairouter.Entity.NetMapping;
 import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
 import net.dabaiyun.ikuairouter.IkuaiRouter;
 import net.dabaiyun.ikuairouter.Util.IpAddrUtil;
@@ -17,8 +22,48 @@ public class RoterTest {
     private final String address = "192.168.77.1";
     private final int port = 8839;
     private final boolean https = true;
-    private final String username = "admin";
-    private final String pwd = "123456";
+    private final String username = "BayMax";
+    private final String pwd = "gs65stealth9se";
+
+    @Test
+    public void paramFindTest() throws Exception {
+//        RequestParamFind requestParamFind = new RequestParamFind("data");
+//        requestParamFind.setFinds(RequestParamFind.FINDS_LAN_ADDR, RequestParamFind.FINDS_LAN_PORT);
+//        System.out.println(requestParamFind.getFinds());
+        IkuaiRouter ikuaiRouter = new IkuaiRouter(
+                address,
+                port,
+                https,
+                username,
+                pwd
+        );
+
+        System.out.println(
+                objectMapper.writerWithDefaultPrettyPrinter()
+                        .writeValueAsString(
+                                ikuaiRouter.getDHCPStaticById(
+                                        116
+                                )
+                        )
+        );
+
+
+//        System.out.println(
+//                objectMapper.writerWithDefaultPrettyPrinter()
+//                        .writeValueAsString(
+//                                ikuaiRouter.getNetMappingByInterfaceAndWanPort(
+//                                        "adsl2",
+//                                        "30325"
+//                                )
+//                        )
+//        );
+//        List<NetMapping> netMappingList = ikuaiRouter.getNetMappingListByIpAddr("adsl1");
+//        for (NetMapping netMapping : netMappingList) {
+//            System.out.println(
+//                    objectMapper.writeValueAsString(netMapping)
+//            );
+//        }
+    }
 
     @Test
     public void portInUseTest() throws Exception {

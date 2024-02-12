@@ -4,11 +4,11 @@ public class RequestParamDel {
 
     private int id;
 
-    public RequestParamDel(int ID) {
-        this.id = ID;
+    public RequestParamDel() {
     }
 
-    public RequestParamDel() {
+    public RequestParamDel(int ID) {
+        this.id = ID;
     }
 
     public int getId() {
