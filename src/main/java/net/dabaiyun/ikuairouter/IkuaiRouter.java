@@ -14,6 +14,7 @@ import okhttp3.Cookie;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -120,7 +121,8 @@ public class IkuaiRouter {
         //遍历查找
         for (NetMapping netMapping : netMappingList) {
             //检查是否符合上行接口
-            if (!netMapping.getInter_face().equals(inter_face)) {
+            List<String> interfaceList = Arrays.asList(netMapping.getInter_face().split(","));
+            if (!interfaceList.contains(inter_face)) {
                 //不符合上行接口的配置直接忽略
 //                    log("上行接口：" + netMapping.getInter_face() + " 不符合，跳过");
                 continue;
@@ -186,7 +188,8 @@ public class IkuaiRouter {
             //遍历所有已存在配置项
             for (NetMapping netMapping : netMappingList) {
                 //检查是否符合上行接口
-                if (!netMapping.getInter_face().equals(inter_face)) {
+                List<String> interfaceList = Arrays.asList(netMapping.getInter_face().split(","));
+                if (!interfaceList.contains(inter_face)) {
                     //不符合上行接口的配置直接忽略
 //                    log("上行接口：" + netMapping.getInter_face() + " 不符合，跳过");
                     continue;

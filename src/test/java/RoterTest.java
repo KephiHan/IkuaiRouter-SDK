@@ -19,11 +19,49 @@ public class RoterTest {
 
     public static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final String address = "192.168.77.1";
-    private final int port = 8839;
+    private final String address = "js-dx-1.dabaiyun.net";
+    private final int port = 8743;
     private final boolean https = true;
     private final String username = "BayMax";
-    private final String pwd = "gs65stealth9se";
+    private final String pwd = "BayMax@10281028";
+
+    @Test
+    public void wanPortInUseTest() throws Exception {
+        IkuaiRouter ikuaiRouter = new IkuaiRouter(
+                address,
+                port,
+                https,
+                username,
+                pwd
+        );
+
+        System.out.println(
+                ikuaiRouter.isWanPortInUse(
+                        "ovpn_js_dx",
+                        40031
+                )
+        );
+    }
+
+    @Test
+    public void getSystemStatusTest() throws Exception {
+        IkuaiRouter ikuaiRouter = new IkuaiRouter(
+                address,
+                port,
+                https,
+                username,
+                pwd
+        );
+
+        System.out.println(
+                objectMapper.writerWithDefaultPrettyPrinter()
+                        .writeValueAsString(
+                                ikuaiRouter.getSystemStatus()
+                        )
+        );
+    }
+
+
 
     @Test
     public void paramFindTest() throws Exception {
@@ -131,7 +169,7 @@ public class RoterTest {
     }
 
     @Test
-    public void delNetmapTest() throws Exception {
+    public void delTest() throws Exception {
         IkuaiRouter ikuaiRouter = new IkuaiRouter(
                 address,
                 port,
@@ -140,7 +178,9 @@ public class RoterTest {
                 pwd
         );
         System.out.println(
-                ikuaiRouter.delNetMappingById(95)
+                ikuaiRouter.delDHCPStaticByIpAddr(
+                        "192.168.77.66"
+                )
         );
     }
 

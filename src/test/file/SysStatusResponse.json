@@ -1,0 +1,60 @@
+{
+  "Result": 30000,
+  "ErrMsg": "Success",
+  "Data": {
+    "sysstat": {
+      "cpu": [
+        "3.75%",
+        "4.00%",
+        "6.00%",
+        "3.00%",
+        "2.00%"
+      ],
+      "cputemp": [
+        44
+      ],
+      "gwid": "50514b337f434ae5b2e1e2eb6c940947",
+      "hostname": "ikuai",
+      "link_status": 0,
+      "memory": {
+        "total": 3432984,
+        "available": 2387364,
+        "free": 2215420,
+        "cached": 51600,
+        "buffers": 136948,
+        "used": "30%"
+      },
+      "online_user": {
+        "count": 30,
+        "count_2g": 0,
+        "count_5g": 0,
+        "count_wired": 30,
+        "count_wireless": 0
+      },
+      "stream": {
+        "connect_num": 171,
+        "upload": 153626,
+        "download": 37415,
+        "total_up": 1070963986470,
+        "total_down": 533460973964
+      },
+      "uptime": 3698724,
+      "verinfo": {
+        "modelname": "",
+        "verstring": "3.5.11 x64 Build202112031159",
+        "version": "3.5.11",
+        "build_date": 202112031159,
+        "arch": "x86",
+        "sysbit": "x64",
+        "verflags": "",
+        "is_enterprise": 0,
+        "support_i18n": 0,
+        "support_lcd": 0
+      }
+    },
+    "ac_status": {
+      "ap_count": 0,
+      "ap_online": 0
+    }
+  }
+}
