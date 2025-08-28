@@ -3,9 +3,7 @@ package net.dabaiyun.ikuairouter;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.dabaiyun.ikuairouter.Action.IkuaiResponseBase;
-import net.dabaiyun.ikuairouter.Action.ResponseAdd;
-import net.dabaiyun.ikuairouter.Action.ResponseShow;
+import net.dabaiyun.ikuairouter.Action.*;
 import net.dabaiyun.ikuairouter.Entity.*;
 import net.dabaiyun.ikuairouter.Entity.sysstat.SystemStatus;
 import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
@@ -832,6 +830,160 @@ public class IkuaiRouter {
         return null;
     }
 
+    /**
+     * Get LanHostInfoList Object
+     *
+     * @return LanHostInfo List
+     * @throws Exception ex
+     */
+    public List<LanHostInfo> getLanHostInfoList() throws Exception {
+        ResponseShow responseShow = routerAgent.getLanHostStatus();
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        if (!dataNode.has("data")) {
+            throw new IkuaiRouterException("data");
+        }
+        String arrStr = dataNode.get("data").toString();
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<LanHostInfo>>() {
+                }
+        );
+    }
+
+    /**
+     * Get InterfaceLanList Object
+     *
+     * @return InterfaceLan List
+     * @throws Exception ex
+     */
+    public List<InterfaceLan> getInterfaceLanList() throws Exception {
+        ResponseShow responseShow = routerAgent.getInterfaceSnapshoot();
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("snapshoot_lan").toString();
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<InterfaceLan>>() {
+                }
+        );
+    }
+
+    /**
+     * Get InterfaceWanList Object
+     *
+     * @return InterfaceWan List
+     * @throws Exception ex
+     */
+    public List<InterfaceWan> getInterfaceWanList() throws Exception {
+        ResponseShow responseShow = routerAgent.getInterfaceSnapshoot();
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("snapshoot_wan").toString();
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<InterfaceWan>>() {
+                }
+        );
+    }
+
+    /**
+     * Get DHCPServerList Object
+     *
+     * @return DHCPServer List
+     * @throws Exception ex
+     */
+    public List<DHCPServer> getDHCPServerList() throws Exception {
+        ResponseShow responseShow = routerAgent.getDHCPServers();
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("data").toString();
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<DHCPServer>>() {
+                }
+        );
+    }
+
+    /**
+     * Get DHCPStaticList Object
+     *
+     * @return DHCPStatic List
+     * @throws Exception ex
+     */
+    public List<DHCPStatic> getDHCPStaticList() throws Exception {
+        ResponseShow responseShow = routerAgent.getDHCPStatics();
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("static_data").toString();
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<DHCPStatic>>() {
+                }
+        );
+    }
+
+    /**
+     * Get getDHCPHostList
+     *
+     * @return DHCPHost List
+     * @throws Exception ex
+     */
+    public List<DHCPHost> getDHCPHostList() throws Exception {
+        ResponseShow responseShow = routerAgent.getDHCPHosts();
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("data").toString();
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<DHCPHost>>() {
+                }
+        );
+    }
+
+    /**
+     * Get NetMappingList
+     *
+     * @return NetMapping List
+     * @throws Exception ex
+     */
+    public List<NetMapping> getNetMappingList() throws Exception {
+        ResponseShow responseShow = routerAgent.getNetMapping();
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("data").toString();
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<NetMapping>>() {
+                }
+        );
+    }
+
+    /**
+     * Get InterfaceCheckList
+     *
+     * @return InterfaceCheckList
+     * @throws Exception e
+     */
+    public List<InterfaceCheck> getInterfaceCheckList() throws Exception {
+        ResponseShow responseShow = routerAgent.getInterfaceCheckList();
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("iface_check").toString();
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<InterfaceCheck>>() {}
+        );
+    }
+
+    /**
+     * Get InterfaceSteamList
+     *
+     * @return InterfaceSteamList
+     * @throws Exception e
+     */
+    public List<InterfaceStream> getInterfaceStreamList() throws Exception {
+        ResponseShow responseShow = routerAgent.getInterfaceStreamList();
+        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
+        String arrStr = dataNode.get("iface_stream").toString();
+        return objectMapper.readValue(
+                arrStr,
+                new TypeReference<List<InterfaceStream>>() {}
+        );
+    }
+
     //================ Adder Functions ==========================
 
     /**
@@ -1253,128 +1405,6 @@ public class IkuaiRouter {
     }
 
     //================ Private Functions ==========================
-
-    /**
-     * Get LanHostInfoList Object
-     *
-     * @return LanHostInfo List
-     * @throws Exception ex
-     */
-    private List<LanHostInfo> getLanHostInfoList() throws Exception {
-        ResponseShow responseShow = routerAgent.getLanHostStatus();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        if (!dataNode.has("data")) {
-            throw new IkuaiRouterException("data");
-        }
-        String arrStr = dataNode.get("data").toString();
-        return objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<LanHostInfo>>() {
-                }
-        );
-    }
-
-    /**
-     * Get InterfaceLanList Object
-     *
-     * @return InterfaceLan List
-     * @throws Exception ex
-     */
-    private List<InterfaceLan> getInterfaceLanList() throws Exception {
-        ResponseShow responseShow = routerAgent.getInterfaceSnapshoot();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("snapshoot_lan").toString();
-        return objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<InterfaceLan>>() {
-                }
-        );
-    }
-
-    /**
-     * Get InterfaceWanList Object
-     *
-     * @return InterfaceWan List
-     * @throws Exception ex
-     */
-    private List<InterfaceWan> getInterfaceWanList() throws Exception {
-        ResponseShow responseShow = routerAgent.getInterfaceSnapshoot();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("snapshoot_wan").toString();
-        return objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<InterfaceWan>>() {
-                }
-        );
-    }
-
-    /**
-     * Get DHCPServerList Object
-     *
-     * @return DHCPServer List
-     * @throws Exception ex
-     */
-    private List<DHCPServer> getDHCPServerList() throws Exception {
-        ResponseShow responseShow = routerAgent.getDHCPServers();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        return objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<DHCPServer>>() {
-                }
-        );
-    }
-
-    /**
-     * Get DHCPStaticList Object
-     *
-     * @return DHCPStatic List
-     * @throws Exception ex
-     */
-    private List<DHCPStatic> getDHCPStaticList() throws Exception {
-        ResponseShow responseShow = routerAgent.getDHCPStatics();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("static_data").toString();
-        return objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<DHCPStatic>>() {
-                }
-        );
-    }
-
-    /**
-     * Get getDHCPHostList
-     *
-     * @return DHCPHost List
-     * @throws Exception ex
-     */
-    private List<DHCPHost> getDHCPHostList() throws Exception {
-        ResponseShow responseShow = routerAgent.getDHCPHosts();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        return objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<DHCPHost>>() {
-                }
-        );
-    }
-
-    /**
-     * Get NetMappingList
-     *
-     * @return NetMapping List
-     * @throws Exception ex
-     */
-    private List<NetMapping> getNetMappingList() throws Exception {
-        ResponseShow responseShow = routerAgent.getNetMapping();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        return objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<NetMapping>>() {
-                }
-        );
-    }
 
     /**
      * 日志打印

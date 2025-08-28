@@ -78,7 +78,7 @@ public class RouterAgent {
 
     //Getter && Setter
 
-    public String getSessKey(){
+    public String getSessKey() {
         if (!cookieStore.containsKey(address)) {
             return "";
         }
@@ -149,7 +149,7 @@ public class RouterAgent {
     public LoginResult login() throws Exception {
         //Check info are not null
         if (!(address != null && port != 0 && username != null && pwd != null)) {
-            return new LoginResult(0,"缺失认证表单数据");
+            return new LoginResult(0, "缺失认证表单数据");
         }
 
         //Generate post infomation
@@ -209,7 +209,8 @@ public class RouterAgent {
 
         LoginResult loginResult = objectMapper.readValue(
                 response_string,
-                new TypeReference<LoginResult>() {}
+                new TypeReference<LoginResult>() {
+                }
         );
 
         return loginResult;
@@ -220,6 +221,7 @@ public class RouterAgent {
 
     /**
      * Get System Plugins
+     *
      * @return
      * @throws Exception
      */
@@ -286,10 +288,11 @@ public class RouterAgent {
 
     /**
      * Get DHCPhosts list
+     *
      * @return jsonString
      * @throws Exception
      */
-    public ResponseShow getDHCPHosts() throws Exception{
+    public ResponseShow getDHCPHosts() throws Exception {
         //Params Object
         RequestParamShow param = new RequestParamShow("data");
         //do post
@@ -364,7 +367,7 @@ public class RouterAgent {
         RequestParamFind param = new RequestParamFind("data");
         param.setFinds(RequestParamFind.FINDS_ID);
         param.setKeywords(id);
-        return new ResponseShow(executeAction(ActionType.show,FuncName.simple_qos,param));
+        return new ResponseShow(executeAction(ActionType.show, FuncName.simple_qos, param));
     }
 
     /**
@@ -377,7 +380,7 @@ public class RouterAgent {
         RequestParamFind param = new RequestParamFind("data");
         param.setFinds(RequestParamFind.FINDS_IP_ADDR);
         param.setKeywords(ip_addr);
-        return new ResponseShow(executeAction(ActionType.show,FuncName.simple_qos,param));
+        return new ResponseShow(executeAction(ActionType.show, FuncName.simple_qos, param));
     }
 
     /**
@@ -456,12 +459,39 @@ public class RouterAgent {
         return new ResponseShow(executeAction(ActionType.show, FuncName.dnat, param));
     }
 
+    /**
+     * Get InterfaceCheckList
+     *
+     * @return InterfaceCheckList
+     * @throws Exception e
+     */
+    public ResponseShow getInterfaceCheckList() throws Exception {
+        //Params Object
+        RequestParamShow param = new RequestParamShow("iface_check");
+        //do post
+        return new ResponseShow(executeAction(ActionType.show, FuncName.monitor_iface, param));
+    }
+
+    /**
+     * Get InterfaceSteamList
+     *
+     * @return InterfaceSteamList
+     * @throws Exception e
+     */
+    public ResponseShow getInterfaceStreamList() throws Exception {
+        //Params Object
+        RequestParamShow param = new RequestParamShow("iface_stream");
+        //do post
+        return new ResponseShow(executeAction(ActionType.show, FuncName.monitor_iface, param));
+    }
+
 
     //================ Add Functions ==========================
 
 
     /**
      * Add DHCPStatic by DHCPStatic Object
+     *
      * @param dhcpStatic DHCPStatic Object
      * @return Response Object
      * @throws Exception e
@@ -479,11 +509,12 @@ public class RouterAgent {
 
     /**
      * Add QosLimit by QosLimit Object
+     *
      * @param qosLimit QosLimit Object
      * @return Response Object
      * @throws Exception e
      */
-    public ResponseAdd addQosLimit(QosLimit qosLimit) throws Exception{
+    public ResponseAdd addQosLimit(QosLimit qosLimit) throws Exception {
         return objectMapper.readValue(
                 executeAction(
                         ActionType.add,
@@ -496,11 +527,12 @@ public class RouterAgent {
 
     /**
      * Add NetMapping by NetMapping Object
+     *
      * @param netMapping NetMapping Object
      * @return Response Object
      * @throws Exception e
      */
-    public ResponseAdd addNetMapping(NetMapping netMapping) throws Exception{
+    public ResponseAdd addNetMapping(NetMapping netMapping) throws Exception {
         return objectMapper.readValue(
                 executeAction(
                         ActionType.add,
@@ -517,7 +549,8 @@ public class RouterAgent {
 
     /**
      * Edit DHCPStatic
-     * @param newDhcpStatic  New DHCPStatic Object
+     *
+     * @param newDhcpStatic New DHCPStatic Object
      * @return Response Object
      * @throws Exception e
      */
@@ -534,11 +567,12 @@ public class RouterAgent {
 
     /**
      * Edit QosLimit
-     * @param qosLimit  New QosLimit Object
+     *
+     * @param qosLimit New QosLimit Object
      * @return Response Object
      * @throws Exception e
      */
-    public ResponseEdit editQosLimit(QosLimit qosLimit) throws Exception{
+    public ResponseEdit editQosLimit(QosLimit qosLimit) throws Exception {
         return objectMapper.readValue(
                 executeAction(
                         ActionType.edit,
@@ -551,11 +585,12 @@ public class RouterAgent {
 
     /**
      * Edit NetMapping
-     * @param netMapping  New NetMapping Object
+     *
+     * @param netMapping New NetMapping Object
      * @return Response Object
      * @throws Exception e
      */
-    public ResponseEdit editNetMapping(NetMapping netMapping) throws Exception{
+    public ResponseEdit editNetMapping(NetMapping netMapping) throws Exception {
         return objectMapper.readValue(
                 executeAction(
                         ActionType.edit,
@@ -571,11 +606,12 @@ public class RouterAgent {
 
     /**
      * Down DHCPStatic By id
+     *
      * @param id Target ID
      * @return Response Object
      * @throws Exception e
      */
-    public ResponseDown downDHCPStatic(int id)throws Exception{
+    public ResponseDown downDHCPStatic(int id) throws Exception {
         return objectMapper.readValue(
                 executeAction(
                         ActionType.down,
@@ -588,11 +624,12 @@ public class RouterAgent {
 
     /**
      * Down QosLimit
+     *
      * @param id QosLimit_id
      * @return Response Object
      * @throws Exception e
      */
-    public ResponseDown downQosLimit(int id) throws Exception{
+    public ResponseDown downQosLimit(int id) throws Exception {
         return objectMapper.readValue(
                 executeAction(
                         ActionType.down,
@@ -605,11 +642,12 @@ public class RouterAgent {
 
     /**
      * Down NetMapping
+     *
      * @param id NetMapping_id
      * @return Response Object
      * @throws Exception e
      */
-    public ResponseDown downNetMapping(int id) throws Exception{
+    public ResponseDown downNetMapping(int id) throws Exception {
         return objectMapper.readValue(
                 executeAction(
                         ActionType.down,
@@ -626,11 +664,12 @@ public class RouterAgent {
 
     /**
      * Delete DHCPStatic By id
+     *
      * @param id Target ID
      * @return Response Object
      * @throws Exception e
      */
-    public ResponseDel delDHCPStatic(int id) throws Exception{
+    public ResponseDel delDHCPStatic(int id) throws Exception {
         return objectMapper.readValue(
                 executeAction(
                         ActionType.del,
@@ -643,11 +682,12 @@ public class RouterAgent {
 
     /**
      * Delete QosLimit By id
+     *
      * @param id Target ID
      * @return Response Object
      * @throws Exception e
      */
-    public ResponseDel delQosLimit(int id) throws Exception{
+    public ResponseDel delQosLimit(int id) throws Exception {
         return objectMapper.readValue(
                 executeAction(
                         ActionType.del,
@@ -660,11 +700,12 @@ public class RouterAgent {
 
     /**
      * Delete NetMapping by id
+     *
      * @param id Id
      * @return Response Object
      * @throws Exception e
      */
-    public ResponseDel delNetMapping(int id) throws Exception{
+    public ResponseDel delNetMapping(int id) throws Exception {
         return objectMapper.readValue(
                 executeAction(
                         ActionType.del,
@@ -680,6 +721,7 @@ public class RouterAgent {
 
     /**
      * Post Proxy for url /Action/call. Designed to simplify the code.
+     *
      * @param actionType
      * @param funcName
      * @param param
@@ -701,7 +743,7 @@ public class RouterAgent {
 
         MediaType JSONType = MediaType.parse("application/json; charset=utf-8");
 
-        RequestInfo requestInfo = new RequestInfo(actionType,funcName);
+        RequestInfo requestInfo = new RequestInfo(actionType, funcName);
         requestInfo.setParam(param);
 
         RequestBody requestBody = RequestBody.create(
@@ -718,7 +760,7 @@ public class RouterAgent {
 
         Response response = call.execute();
 
-        if(!response.isSuccessful()){
+        if (!response.isSuccessful()) {
             throw new IkuaiRouterException("Error orrcued when executeAction");
         }
 
@@ -729,7 +771,8 @@ public class RouterAgent {
         //预检查相应
         IkuaiResponseBase responseBase = objectMapper.readValue(
                 resp,
-                new TypeReference<IkuaiResponseBase>() {}
+                new TypeReference<IkuaiResponseBase>() {
+                }
         );
 //        //相应身份过期
 //        if (responseBase.isAuthFail()) {
