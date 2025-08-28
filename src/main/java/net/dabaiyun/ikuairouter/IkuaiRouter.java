@@ -167,6 +167,72 @@ public class IkuaiRouter {
     }
 
     /**
+     * 查询公网端口是否被使用(多接口)
+     *
+     * @param interfaceList WAN接口
+     * @param wanPort    端口
+     * @return 是否被使用
+     * @throws Exception ex
+     */
+    public boolean isWanPortInUseMultiInterface(List<String> interfaceList, int wanPort) throws Exception {
+        //获取所有端口映射配置条目
+        List<NetMapping> netMappingList = this.getNetMappingList();
+        //遍历查找
+        for (NetMapping netMapping : netMappingList) {
+            log("遍历NetMapping:" + netMapping);
+            //检查是否符合上行接口
+            List<String> netMappingInterfaceList = Arrays.asList(netMapping.getInter_face().split(","));
+            log("NetMapping已使用接口：" + netMappingInterfaceList);
+            //上行接口有交集标记
+            boolean interfaceMatch = false;
+            //遍历接口，判断是否有交集
+            for (String toUseInterface : interfaceList) {
+                log("判断将要使用的接口：" + toUseInterface);
+                if (netMappingInterfaceList.contains(toUseInterface)) {
+                    log("NetMapping已使用接口" + toUseInterface + "交集标记置为true，跳出循环");
+                    interfaceMatch = true;
+                    break;
+                }else{
+                    log("NetMapping未使用接口" + toUseInterface);
+                }
+            }
+            //如果没有交集，跳过端口判断
+            if(!interfaceMatch) {
+                log("没有交集，跳过端口判断");
+                continue;
+            }
+            //对范围端口进行处理
+            log("处理配置字符串：" + netMapping.getWan_port());
+            //按逗号分隔多段配置
+            String[] ports_str = netMapping.getWan_port().split(",");
+            //处理每一段端口
+            for (String s : ports_str) {
+                log("处理配置字符串：" + s);
+                String[] portRange_str = s.split("-");
+                //如果是单个端口
+                if (portRange_str.length == 1) {
+                    log("单个端口：" + portRange_str[0]);
+                    //判断是否和currentPort相同
+                    if (Integer.parseInt(portRange_str[0]) == wanPort) {
+                        log("当前端口：" + wanPort + " 已使用");
+                        return true;
+                    }
+                }
+                //如果是端口范围
+                if (portRange_str.length == 2) {
+                    log("范围端口：" + portRange_str[0] + " - " + portRange_str[1]);
+                    //当前端口处于范围内
+                    if ((wanPort >= Integer.parseInt(portRange_str[0]) && wanPort <= Integer.parseInt(portRange_str[1]))) {
+                        log("当前端口：" + wanPort + " 已使用");
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * 查找可用公网端口
      *
      * @param inter_face 上行接口

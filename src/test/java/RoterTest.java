@@ -22,6 +22,25 @@ public class RoterTest {
     private final String username = "BayMax";
     private final String pwd = "BayMax@10281028";
 
+    @Test
+    public void isWanPortInUseMultiInterface() throws Exception {
+        IkuaiRouter ikuaiRouter = new IkuaiRouter(
+                "192.168.77.1",
+                8839,
+                true,
+                "BayMax",
+                "gs65stealth9se"
+        );
+        ikuaiRouter.setDebug(true);
+        List<String> interfaceList = new ArrayList<>();
+        interfaceList.add("adsl1");
+//        interfaceList.add("ovpn_bj_jd_1");
+//        interfaceList.add("ovpn_hz_ali_1");
+        boolean rst = ikuaiRouter.isWanPortInUseMultiInterface(
+                interfaceList, 30030
+        );
+        System.out.println("端口被使用：" + rst);
+    }
 
     @Test
     public void findAvailableNetMappingWanPortMultiInterfaceTest() throws Exception {
