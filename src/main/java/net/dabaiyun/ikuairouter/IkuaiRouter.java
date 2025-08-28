@@ -21,12 +21,13 @@ import java.util.List;
 public class IkuaiRouter {
     //Tools
     private static final ObjectMapper objectMapper = new ObjectMapper();
-
+    
     //Agent
     private RouterAgent routerAgent;
 
-    //Statu
+    //Status
     private boolean isLogin = false;
+    private boolean debug = false;
 
     //Construcs
 
@@ -71,6 +72,13 @@ public class IkuaiRouter {
         return routerAgent.getCookieStore();
     }
 
+    public boolean isDebug() {
+        return debug;
+    }
+
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+    }
 //================ Other Functions ==========================
 
 
@@ -228,6 +236,102 @@ public class IkuaiRouter {
                 }
             }
             if (!isInUse) {
+                target_port = currentPort;
+                has_port = true;
+                break;
+            }
+        }
+        if (!has_port) {
+            throw new IkuaiRouterException("No available port found.");
+        }
+        return target_port;
+    }
+
+    /**
+     * 查找可用公网端口(多接口)
+     *
+     * @param toUseInterfaceList 上行接口列表
+     * @param portbegin  起始端口
+     * @param portend    结束端口
+     * @return int          找到的端口
+     * @throws Exception 找不到可用端口
+     */
+    public int findAvailableNetMappingWanPortMultiInterface(List<String> toUseInterfaceList, int portbegin, int portend) throws Exception {
+        //端口合法性预处理
+        if (portbegin <= 0) {
+            portbegin = 1;
+        }
+        if (portend > 65535) {
+            portend = 65535;
+        }
+        boolean has_port = false;
+        int target_port = -1;
+        //获取所有端口映射配置条目
+        List<NetMapping> netMappingList = this.getNetMappingList();
+        log("获取到NetMapping记录共 " + netMappingList.size() + " 个");
+        //遍历查找
+        for (int currentPort = portbegin; currentPort <= portend; currentPort++) {
+            log("当前遍历端口：" + currentPort);
+            //当前端口是否被使用
+            boolean currentPortIsInUse = false;
+            //遍历所有已存在配置项
+            for (NetMapping netMapping : netMappingList) {
+                log("遍历NetMapping:" + netMapping);
+                //检查是否符合上行接口
+                List<String> netMappingInterfaceList = Arrays.asList(netMapping.getInter_face().split(","));
+                log("NetMapping已使用接口：" + netMappingInterfaceList);
+                //上行接口有交集标记
+                boolean interfaceMatch = false;
+                //遍历接口，判断是否有交集
+                for (String toUseInterface : toUseInterfaceList) {
+                    log("判断将要使用的接口：" + toUseInterface);
+                    if (netMappingInterfaceList.contains(toUseInterface)) {
+                        log("NetMapping已使用接口" + toUseInterface + "交集标记置为true，跳出循环");
+                        interfaceMatch = true;
+                        break;
+                    }else{
+                        log("NetMapping未使用接口" + toUseInterface);
+                    }
+                }
+                //如果没有交集，跳过端口判断
+                if(!interfaceMatch) {
+                    log("没有交集，跳过端口判断");
+                    continue;
+                }
+                //对范围端口进行处理
+                log("处理配置字符串：" + netMapping.getWan_port());
+                //按逗号分隔多段配置
+                String[] ports_str = netMapping.getWan_port().split(",");
+                //处理每一段端口
+                for (String s : ports_str) {
+                    log("处理每一个端口：" + s);
+                    String[] portRange_str = s.split("-");
+                    //如果是单个端口
+                    if (portRange_str.length == 1) {
+                        log("当前单个端口：" + portRange_str[0]);
+                        //判断是否和currentPort相同
+                        if (Integer.parseInt(portRange_str[0]) == currentPort) {
+                            log("当前端口：" + currentPort + " 已使用");
+                            currentPortIsInUse = true;
+                            break;
+                        }
+                    }
+                    //如果是端口范围
+                    if (portRange_str.length == 2) {
+                        log("范围端口：" + portRange_str[0] + " - " + portRange_str[1]);
+                        //当前端口处于范围内
+                        if ((currentPort >= Integer.parseInt(portRange_str[0]) && currentPort <= Integer.parseInt(portRange_str[1]))) {
+                            log("当前端口：" + currentPort + " 已使用");
+                            currentPortIsInUse = true;
+                            break;
+                        }
+                    }
+                }
+                if (currentPortIsInUse) {
+                    break;
+                }
+            }
+            if (!currentPortIsInUse) {
                 target_port = currentPort;
                 has_port = true;
                 break;
@@ -1206,4 +1310,15 @@ public class IkuaiRouter {
         );
     }
 
+    /**
+     * 日志打印
+     * @param msg 日志内容
+     */
+    private void log(String msg) {
+        if (debug) {
+            System.out.println(msg);
+        }
+    }
+    
+    
 }

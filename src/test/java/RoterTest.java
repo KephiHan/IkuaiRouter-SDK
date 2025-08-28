@@ -10,10 +10,7 @@ import net.dabaiyun.ikuairouter.Util.IpAddrUtil;
 import okhttp3.Cookie;
 import org.junit.Test;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class RoterTest {
 
@@ -24,6 +21,26 @@ public class RoterTest {
     private final boolean https = true;
     private final String username = "BayMax";
     private final String pwd = "BayMax@10281028";
+
+
+    @Test
+    public void findAvailableNetMappingWanPortMultiInterfaceTest() throws Exception {
+        IkuaiRouter ikuaiRouter = new IkuaiRouter(
+                "192.168.77.1",
+                8839,
+                true,
+                "BayMax",
+                "gs65stealth9se"
+        );
+        ikuaiRouter.setDebug(true);
+        List<String> interfaceList = new ArrayList<>();
+        interfaceList.add("ovpn_bj_jd_1");
+//        interfaceList.add("ovpn_hz_ali_1");
+        int port = ikuaiRouter.findAvailableNetMappingWanPortMultiInterface(
+                interfaceList, 30030, 30099
+        );
+        System.out.println("找到可用端口" + port);
+    }
 
     @Test
     public void wanPortInUseTest() throws Exception {
@@ -60,7 +77,6 @@ public class RoterTest {
                         )
         );
     }
-
 
 
     @Test
@@ -194,7 +210,7 @@ public class RoterTest {
                 username,
                 pwd
         );
-        System.out.println(ikuaiRouter.findAvailableNetMappingWanPort("adsl2",30000,31000));
+        System.out.println(ikuaiRouter.findAvailableNetMappingWanPort("adsl2", 30000, 31000));
         long time_end = System.currentTimeMillis();
         System.out.println(" Time : " + (time_end - time_begin) + "ms");
 //        System.out.println(Arrays.toString("8000,8005".split("-|,")));
