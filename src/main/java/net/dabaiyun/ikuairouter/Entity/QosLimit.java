@@ -48,8 +48,9 @@ public class QosLimit {
         public static final String ALL_DAY = "00:00-23:59";
     }
 
-    public static class Type {
-        public static final Integer DEFALUT = 0;
+    public static class LimitType {
+        public static final Integer INDEPENDENT = 0;
+        public static final Integer SHARD       = 1;
     }
 
     public static class ProtocolType {
