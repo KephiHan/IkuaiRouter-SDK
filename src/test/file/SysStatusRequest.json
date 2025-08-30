@@ -1,7 +1,0 @@
-{
-  "func_name": "homepage",
-  "action": "show",
-  "param": {
-    "TYPE": "sysstat"
-  }
-}
