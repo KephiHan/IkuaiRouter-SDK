@@ -6,7 +6,7 @@
 
     <groupId>net.dabaiyun</groupId>
     <artifactId>IkuaiRouter-SDK</artifactId>
-    <version>3.5.3T01</version>
+    <version>3.5.3T02</version>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
