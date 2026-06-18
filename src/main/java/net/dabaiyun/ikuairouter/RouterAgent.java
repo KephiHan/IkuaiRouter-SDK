@@ -7,6 +7,9 @@ import net.dabaiyun.ikuairouter.Entity.DHCPStatic;
 import net.dabaiyun.ikuairouter.Entity.NetMapping;
 import net.dabaiyun.ikuairouter.Entity.QosLimit;
 import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
+import net.dabaiyun.ikuairouter.Exception.IkuaiRouterAuthException;
+import net.dabaiyun.ikuairouter.Exception.IkuaiRouterNetworkException;
+import net.dabaiyun.ikuairouter.Exception.IkuaiRouterApiException;
 import net.dabaiyun.ikuairouter.HttpApi.TrustAllCertOkHttpClient;
 import okhttp3.*;
 
@@ -167,8 +170,14 @@ public class RouterAgent {
         String str = "salt_11" + pwd;
         pass = Base64.getEncoder().encodeToString(str.getBytes(StandardCharsets.UTF_8));
         //getPasswd
-        // MessageDigest instance for MD5
-        MessageDigest md = MessageDigest.getInstance("MD5");
+        // WARNING: MD5 is cryptographically weak. Used here because iKuai API protocol requires it.
+        // This is NOT a security recommendation - it's a compatibility constraint.
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("MD5");
+        } catch (Exception e) {
+            throw new IkuaiRouterNetworkException("Failed to initialize MD5 MessageDigest", e);
+        }
         // Update MessageDigest with input text in bytes
         md.update(pwd.getBytes(StandardCharsets.UTF_8));
         // Get the hashbytes
@@ -197,10 +206,15 @@ public class RouterAgent {
 
         MediaType JSONType = MediaType.parse("application/json; charset=utf-8");
 
-        RequestBody requestBody = RequestBody.create(
-                objectMapper.writeValueAsString(ikuaiLoginPostInfo),
-                JSONType
-        );
+        RequestBody requestBody;
+        try {
+            requestBody = RequestBody.create(
+                    objectMapper.writeValueAsString(ikuaiLoginPostInfo),
+                    JSONType
+            );
+        } catch (Exception e) {
+            throw new IkuaiRouterNetworkException("Failed to serialize login request", e);
+        }
 
         Request request = new Request.Builder()
                 .url(url_login)
@@ -212,7 +226,7 @@ public class RouterAgent {
         try (Response response = call.execute()) {
             ResponseBody body = response.body();
             if (body == null) {
-                throw new IkuaiRouterException("Login response body is null");
+                throw new IkuaiRouterNetworkException("Login response body is null");
             }
             String response_string = body.string();
 
@@ -223,6 +237,10 @@ public class RouterAgent {
             );
 
             return loginResult;
+        } catch (IkuaiRouterException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IkuaiRouterNetworkException("Login HTTP request failed", e);
         }
     }
 
@@ -754,10 +772,15 @@ public class RouterAgent {
         RequestInfo requestInfo = new RequestInfo(actionType, funcName);
         requestInfo.setParam(param);
 
-        RequestBody requestBody = RequestBody.create(
-                objectMapper.writeValueAsString(requestInfo),
-                JSONType
-        );
+        RequestBody requestBody;
+        try {
+            requestBody = RequestBody.create(
+                    objectMapper.writeValueAsString(requestInfo),
+                    JSONType
+            );
+        } catch (Exception e) {
+            throw new IkuaiRouterNetworkException("Failed to serialize request", e);
+        }
 
         Request request = new Request.Builder()
                 .url(url)
@@ -768,12 +791,12 @@ public class RouterAgent {
 
         try (Response response = call.execute()) {
             if (!response.isSuccessful()) {
-                throw new IkuaiRouterException("Error occurred when executeAction, HTTP status: " + response.code());
+                throw new IkuaiRouterNetworkException("Error occurred when executeAction, HTTP status: " + response.code());
             }
 
             ResponseBody body = response.body();
             if (body == null) {
-                throw new IkuaiRouterException("Response body is null when executeAction");
+                throw new IkuaiRouterNetworkException("Response body is null when executeAction");
             }
 
             String resp = body.string();
@@ -784,15 +807,19 @@ public class RouterAgent {
                     new TypeReference<IkuaiResponseBase>() {
                     }
             );
-//        //响应身份过期
-//        if (responseBase.isAuthFail()) {
-//            throw new IkuaiRouterNoAuthException(responseBase.getErrMsg());
-//        }
+            //响应身份过期
+            if (responseBase.isAuthFail()) {
+                throw new IkuaiRouterAuthException(responseBase.getErrMsg());
+            }
             //响应不成功
             if (!responseBase.isSuccess()) {
-                throw new IkuaiRouterException(responseBase.getErrMsg());
+                throw new IkuaiRouterApiException(responseBase.getErrMsg(), responseBase.getResult());
             }
             return resp;
+        } catch (IkuaiRouterException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IkuaiRouterNetworkException("HTTP request failed", e);
         }
     }
 }

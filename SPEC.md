@@ -940,18 +940,17 @@ QosLimit.ProtocolType.ANY = "any";
 
 ### 9.1 异常体系
 
-项目仅使用一个自定义异常：
+项目使用分层异常体系：
 
 ```
-IkuaiRouterException (extends java.lang.Exception)
-├── 空构造
-├── IkuaiRouterException(String message)
-├── IkuaiRouterException(String message, Throwable cause)
-├── IkuaiRouterException(Throwable cause)
-└── 全参数构造
+IkuaiRouterException (extends java.lang.Exception) — 基类
+├── IkuaiRouterAuthException       — 认证失败/会话过期 (Result=10014)
+├── IkuaiRouterNetworkException    — HTTP 通信失败、响应体为空、序列化失败
+└── IkuaiRouterApiException        — API 业务失败 (Result 非成功码且非认证失败)
+                                     含 resultCode 字段，可获取原始 Result 码
 ```
 
-所有 HTTP 调用失败、业务逻辑错误（如找不到可用端口/IP、参数校验失败）均抛出此异常。属于受检异常 (Checked Exception)，调用方必须处理。
+异常分层应用于 `RouterAgent` 的 `login()` 和 `executeAction()` 方法内部。所有 public 方法签名保持 `throws Exception`，调用方可通过 stanceof` 精确判断异常类型。
 
 ### 9.2 API 响应码对照表
 
@@ -959,8 +958,8 @@ IkuaiRouterException (extends java.lang.Exception)
 |-----------|------|----------|
 | `10000` | 登录成功 | `LoginResult.isSuccess()` 返回 true |
 | `30000` | 操作成功 | `IkuaiResponseBase.isSuccess()` 返回 true |
-| `10014` | 认证失败 | Session 过期/无效，`isAuthFail()` 返回 true |
-| 其他 | 操作失败 | 直接抛出 `IkuaiRouterException(responseBase.getErrMsg())` |
+| `10014` | 认证失败 | Session 过期/无效，抛出 `IkuaiRouterAuthException` |
+| 其他 | 操作失败 | 抛出 `IkuaiRouterApiException(errMsg, resultCode)` |
 
 ### 9.3 错误处理流程
 
@@ -968,17 +967,21 @@ IkuaiRouterException (extends java.lang.Exception)
 executeAction()
     ↓
 HTTP POST → 检查 response.isSuccessful()
-    ↓ (失败) → throw IkuaiRouterException("Error occurred when executeAction")
+    ↓ (失败) → throw IkuaiRouterNetworkException("HTTP status: " + code)
     ↓ (成功)
+检查 response body 非空
+    ↓ (null) → throw IkuaiRouterNetworkException("Response body is null")
+    ↓ (非空)
 解析 JSON → 预检查 Result 码
-    ↓ (非 30000) → throw IkuaiRouterException(getErrMsg())
+    ↓ (10014) → throw IkuaiRouterAuthException(errMsg)
+    ↓ (非 30000) → throw IkuaiRouterApiException(errMsg, resultCode)
     ↓ (30000)
 返回原始 JSON 字符串
 ```
 
 ### 9.4 会话过期处理
 
-注释中存在 `IkuaiRouterNoAuthException` 的引用（已注释），当前实现中认证失败直接通过预检查抛出 `IkuaiRouterException`，调用方需自行处理会话重连。
+当 `executeAction()` 检测到 Result=10014 时，抛出 `IkuaiRouterAuthException`。调用方可捕获此异常后调用 `login()` 重新认证，或由上层业务平台的 Redis 缓存机制处理 sesskey 续期。
 
 ---
 
