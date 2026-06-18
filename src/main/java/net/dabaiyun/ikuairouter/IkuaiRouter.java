@@ -10,11 +10,10 @@ import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
 import net.dabaiyun.ikuairouter.Util.IpAddrUtil;
 import okhttp3.Cookie;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class IkuaiRouter {
     //Tools
@@ -66,7 +65,7 @@ public class IkuaiRouter {
         isLogin = login;
     }
 
-    public HashMap<String, List<Cookie>> getCookieStore() {
+    public Map<String, List<Cookie>> getCookieStore() {
         return routerAgent.getCookieStore();
     }
 
@@ -477,13 +476,13 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public String findAvailableIpAddr(String gateway, int netmaskBit, String ip_begin, String ip_end) throws Exception {
-        if (!IpAddrUtil.isIpVaild(gateway)) {
+        if (!IpAddrUtil.isIpValid(gateway)) {
             throw new IkuaiRouterException("gateway " + gateway + " invaild");
         }
-        if (!IpAddrUtil.isIpVaild(ip_begin)) {
+        if (!IpAddrUtil.isIpValid(ip_begin)) {
             throw new IkuaiRouterException("ip_begin " + ip_begin + " invaild");
         }
-        if (!IpAddrUtil.isIpVaild(ip_end)) {
+        if (!IpAddrUtil.isIpValid(ip_end)) {
             throw new IkuaiRouterException("ip_end " + ip_end + " invaild");
         }
         if (!IpAddrUtil.isMaskBitVaild(netmaskBit)) {

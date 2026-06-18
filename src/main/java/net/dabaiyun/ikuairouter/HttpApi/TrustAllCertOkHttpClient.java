@@ -15,12 +15,12 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TrustAllCertOkHttpClient {
 
-    public static OkHttpClient getTrustAllCertOkHttpClient(HashMap<String, List<Cookie>> cookieStore){
+    public static OkHttpClient getTrustAllCertOkHttpClient(Map<String, List<Cookie>> cookieStore){
         X509TrustManager trustManager = new X509TrustManager() {
             @Override
             public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
@@ -43,7 +43,7 @@ public class TrustAllCertOkHttpClient {
             sslContext = SSLContext.getInstance("SSL");
             sslContext.init(null, new TrustManager[]{trustManager}, new SecureRandom());
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            e.printStackTrace();
+            throw new RuntimeException("SSL context initialization failed", e);
         }
 
         return (new OkHttpClient.Builder())

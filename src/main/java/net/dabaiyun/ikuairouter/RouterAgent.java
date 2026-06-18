@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RouterAgent {
     //Tools
@@ -30,11 +32,14 @@ public class RouterAgent {
     private String username;
     private String pwd;
     //CookieStore
-    private HashMap<String, List<Cookie>> cookieStore;
+    private Map<String, List<Cookie>> cookieStore;
+    //HTTP Client (reused across all requests for this agent instance)
+    private final OkHttpClient okHttpClient;
 
     //Default constructor
     public RouterAgent() {
-        cookieStore = new HashMap<>();
+        cookieStore = new ConcurrentHashMap<>();
+        this.okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
     }
 
     //Constructor with base info
@@ -44,7 +49,8 @@ public class RouterAgent {
         this.https = https;
         this.username = username;
         this.pwd = pwd;
-        this.cookieStore = new HashMap<>();
+        this.cookieStore = new ConcurrentHashMap<>();
+        this.okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
     }
 
     public RouterAgent(String address, int port, boolean https, String username, String pwd, HashMap<String, List<Cookie>> cookieStore) {
@@ -53,7 +59,8 @@ public class RouterAgent {
         this.https = https;
         this.username = username;
         this.pwd = pwd;
-        this.cookieStore = cookieStore;
+        this.cookieStore = new ConcurrentHashMap<>(cookieStore);
+        this.okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(this.cookieStore);
     }
 
     public RouterAgent(String address, int port, boolean https, String username, String pwd, String sess_key) {
@@ -72,8 +79,9 @@ public class RouterAgent {
                 .build();
         List<Cookie> cookieList = new ArrayList<>();
         cookieList.add(cookie);
-        cookieStore = new HashMap<>();
+        cookieStore = new ConcurrentHashMap<>();
         cookieStore.put(address, cookieList);
+        this.okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
     }
 
     //Getter && Setter
@@ -130,11 +138,11 @@ public class RouterAgent {
         this.https = https;
     }
 
-    public HashMap<String, List<Cookie>> getCookieStore() {
+    public Map<String, List<Cookie>> getCookieStore() {
         return cookieStore;
     }
 
-    public void setCookieStore(HashMap<String, List<Cookie>> cookieStore) {
+    public void setCookieStore(Map<String, List<Cookie>> cookieStore) {
         this.cookieStore = cookieStore;
     }
 
@@ -187,8 +195,6 @@ public class RouterAgent {
                         ":" + port +
                         "/Action/login";
 
-        OkHttpClient okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
-
         MediaType JSONType = MediaType.parse("application/json; charset=utf-8");
 
         RequestBody requestBody = RequestBody.create(
@@ -203,17 +209,21 @@ public class RouterAgent {
 
         Call call = okHttpClient.newCall(request);
 
-        Response response = call.execute();
+        try (Response response = call.execute()) {
+            ResponseBody body = response.body();
+            if (body == null) {
+                throw new IkuaiRouterException("Login response body is null");
+            }
+            String response_string = body.string();
 
-        String response_string = response.body().string();
+            LoginResult loginResult = objectMapper.readValue(
+                    response_string,
+                    new TypeReference<LoginResult>() {
+                    }
+            );
 
-        LoginResult loginResult = objectMapper.readValue(
-                response_string,
-                new TypeReference<LoginResult>() {
-                }
-        );
-
-        return loginResult;
+            return loginResult;
+        }
     }
 
 
@@ -739,8 +749,6 @@ public class RouterAgent {
                         ":" + port +
                         "/Action/call";
 
-        OkHttpClient okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
-
         MediaType JSONType = MediaType.parse("application/json; charset=utf-8");
 
         RequestInfo requestInfo = new RequestInfo(actionType, funcName);
@@ -758,30 +766,33 @@ public class RouterAgent {
 
         Call call = okHttpClient.newCall(request);
 
-        Response response = call.execute();
+        try (Response response = call.execute()) {
+            if (!response.isSuccessful()) {
+                throw new IkuaiRouterException("Error occurred when executeAction, HTTP status: " + response.code());
+            }
 
-        if (!response.isSuccessful()) {
-            throw new IkuaiRouterException("Error orrcued when executeAction");
-        }
+            ResponseBody body = response.body();
+            if (body == null) {
+                throw new IkuaiRouterException("Response body is null when executeAction");
+            }
 
-        String resp = response.body().string();
+            String resp = body.string();
 
-        response.close();
-
-        //预检查相应
-        IkuaiResponseBase responseBase = objectMapper.readValue(
-                resp,
-                new TypeReference<IkuaiResponseBase>() {
-                }
-        );
-//        //相应身份过期
+            //预检查响应
+            IkuaiResponseBase responseBase = objectMapper.readValue(
+                    resp,
+                    new TypeReference<IkuaiResponseBase>() {
+                    }
+            );
+//        //响应身份过期
 //        if (responseBase.isAuthFail()) {
 //            throw new IkuaiRouterNoAuthException(responseBase.getErrMsg());
 //        }
-        //响应不成功
-        if (!responseBase.isSuccess()) {
-            throw new IkuaiRouterException(responseBase.getErrMsg());
+            //响应不成功
+            if (!responseBase.isSuccess()) {
+                throw new IkuaiRouterException(responseBase.getErrMsg());
+            }
+            return resp;
         }
-        return resp;
     }
 }

@@ -7,43 +7,43 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class IkuaiResponseBase {
 
     @JsonProperty("Result")
-    private int Result;
+    private int result;
     @JsonProperty("ErrMsg")
-    private String ErrMsg;
+    private String errMsg;
 
     /**
      * 登入是否成功，Result码 30000成功 其他失败
      * @return 成功与否
      */
     public boolean isSuccess(){
-        return Result == 30000;
+        return result == 30000;
     }
 
     public boolean isAuthFail(){
-        return Result == 10014;
+        return result == 10014;
     }
 
     public IkuaiResponseBase() {
     }
 
     public IkuaiResponseBase(int result, String errMsg) {
-        Result = result;
-        ErrMsg = errMsg;
+        this.result = result;
+        this.errMsg = errMsg;
     }
 
     public int getResult() {
-        return Result;
+        return result;
     }
 
     public void setResult(int result) {
-        Result = result;
+        this.result = result;
     }
 
     public String getErrMsg() {
-        return ErrMsg;
+        return errMsg;
     }
 
     public void setErrMsg(String errMsg) {
-        ErrMsg = errMsg;
+        this.errMsg = errMsg;
     }
 }

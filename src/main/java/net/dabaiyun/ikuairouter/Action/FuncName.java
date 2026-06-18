@@ -6,6 +6,8 @@ public enum FuncName {
     //Statu Montior
     monitor_iface,
     monitor_lanip,
+    //LAN
+    lan,
     //DHCP Settings
     dhcp_server,
     //DHCP_Static_Allocate
