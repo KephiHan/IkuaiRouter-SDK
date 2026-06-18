@@ -582,11 +582,10 @@ boolean isWanPortInUse(String inter_face, int wanPort)
 boolean isWanPortInUseMultiInterface(List<String> interfaceList, int wanPort)
 ```
 
-**算法逻辑**:
+**算法逻辑** (已优化为 O(N+1)):
 1. 获取全部端口映射规则
-2. 过滤出与目标接口匹配的规则（接口名逗号分隔，只要有交集就匹配）
-3. 解析每条规则的 `wan_port` 字段（支持三种格式）
-4. 判断目标端口是否落入已占用的端口集合
+2. 调用 `parseUsedPorts()` 预建已占用端口 `HashSet<Integer>`：过滤匹配接口的规则，解析所有 `wan_port` 字段
+3. 通过 `HashSet.contains()` O(1) 判断目标端口是否被占用
 
 **wan_port 字段支持的格式**:
 - 单端口: `"8080"`
@@ -658,11 +657,12 @@ String findAvailableIpAddr(String gateway, int netmaskBit, String ip_begin, Stri
 
 **参数校验**: 对 gateway、ip_begin、ip_end、netmaskBit 逐一进行合法性校验，包括 IP 格式、掩码范围（1-32）、IP 是否在指定 CIDR 内。
 
-**算法逻辑**:
+**算法逻辑** (已优化为 O(N+P)):
 1. 获取当前系统所有 DHCP 动态租约和静态绑定
-2. 在指定范围内从小到大遍历每个 IP
-3. 检查是否已被 DHCPHost 或 DHCPStatic 占用
-4. 返回第一个未被占用的 IP
+2. 预建已用 IP 的 `HashSet<String>`（将 DHCPHost 和 DHCPStatic 的 IP 全部放入集合）
+3. 在指定范围内从小到大遍历每个 IP
+4. 通过 `HashSet.contains()` O(1) 判断是否被占用
+5. 返回第一个未被占用的 IP
 
 ---
 
