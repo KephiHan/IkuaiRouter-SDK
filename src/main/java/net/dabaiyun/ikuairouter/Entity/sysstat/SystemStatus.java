@@ -2,6 +2,7 @@
 package net.dabaiyun.ikuairouter.Entity.sysstat;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
@@ -14,7 +15,10 @@ public class SystemStatus {
     private String hostname;
     private int link_status;
     private Memory memory;
-    private Online_user online_user;
+
+    @JsonProperty("online_user")
+    private OnlineUser onlineUser;
+
     private Stream stream;
     private long uptime;
     private Verinfo verinfo;
@@ -67,12 +71,12 @@ public class SystemStatus {
         return memory;
     }
 
-    public void setOnline_user(Online_user online_user) {
-        this.online_user = online_user;
+    public void setOnlineUser(OnlineUser onlineUser) {
+        this.onlineUser = onlineUser;
     }
 
-    public Online_user getOnline_user() {
-        return online_user;
+    public OnlineUser getOnlineUser() {
+        return onlineUser;
     }
 
     public void setStream(Stream stream) {
@@ -108,7 +112,7 @@ public class SystemStatus {
                 ", hostname='" + hostname + '\'' +
                 ", link_status=" + link_status +
                 ", memory=" + memory +
-                ", online_user=" + online_user +
+                ", onlineUser=" + onlineUser +
                 ", stream=" + stream +
                 ", uptime=" + uptime +
                 ", verinfo=" + verinfo +

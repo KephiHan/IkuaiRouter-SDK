@@ -169,7 +169,7 @@ net.dabaiyun.ikuairouter
 │       ├── SystemStatus.java       # 系统状态汇总
 │       ├── Memory.java             # 内存信息
 │       ├── Stream.java             # 流量信息
-│       ├── Online_user.java        # 在线用户统计
+│       ├── OnlineUser.java          # 在线用户统计
 │       └── Verinfo.java            # 版本信息
 │
 ├── Exception/
@@ -186,11 +186,14 @@ net.dabaiyun.ikuairouter
 
 | 类名 | 行数 | 职责描述 |
 |------|------|----------|
-| `IkuaiRouter` | 1420 | 对外主 API 门面，封装所有业务操作和高级逻辑 |
-| `RouterAgent` | 787 | HTTP 通信代理，请求构建与响应预处理 |
+| `IkuaiRouter` | - | 对外主 API 门面，封装所有业务操作、高级逻辑、并发保护(portLock) |
+| `RouterAgent` | - | HTTP 通信代理，请求构建、响应预处理、异常分层(Auth/Network/Api) |
 | `TrustAllCertOkHttpClient` | 67 | OkHttpClient 工厂，信任所有证书 + CookieJar 管理 + SSL 初始化失败快速失败 |
 | `IpAddrUtil` | 381 | IP 地址计算、校验、转换工具 |
-| `IkuaiRouterException` | 23 | 项目唯一自定义异常 |
+| `IkuaiRouterException` | - | 异常基类 |
+| `IkuaiRouterAuthException` | - | 认证失败/会话过期异常 (Result=10014) |
+| `IkuaiRouterNetworkException` | - | HTTP 通信失败异常 |
+| `IkuaiRouterApiException` | - | API 业务失败异常（含 resultCode） |
 
 ---
 
@@ -406,8 +409,23 @@ private String executeAction(ActionType actionType, FuncName funcName, Object pa
 3. 序列化为 JSON → 创建 OkHttp POST 请求
 4. 通过实例持有的 `OkHttpClient` 发起调用（try-with-resources 确保 Response 关闭）
 5. 校验 HTTP 状态码 + response body 非空
-6. 预检查 `Result` 码，非 30000 时抛出 `IkuaiRouterException`
+6. 预检查 `Result` 码：10014 抛出 `IkuaiRouterAuthException`，其他非 30000 抛出 `IkuaiRouterApiException`
 7. 成功返回原始 JSON 字符串
+
+#### 5.2.8 IkuaiRouter 核心私有方法
+
+```java
+private <T> T parseData(ResponseShow response, String dataKey, TypeReference<T> type) throws Exception
+```
+
+统一 JSON 反序列化入口，内置 null 检查。所有 getter 方法通过此方法解析响应数据。
+
+```java
+private Set<Integer> parseUsedPorts(List<NetMapping> netMappingList, List<String> targetInterfaces)
+private void parseWanPortInto(Set<Integer> usedPorts, String wanPortSpec)
+```
+
+端口占用解析工具方法，预建 HashSet 供 O(1) 查询。
 
 ### 5.3 高级业务逻辑层 — IkuaiRouter
 
@@ -482,7 +500,8 @@ List<NetMapping> getNetMappingListByIpAddr(String ip_addr)
 
 **新增**:
 ```java
-Integer addNetMapping(NetMapping netMapping)  // 返回新行 ID
+Integer addNetMapping(NetMapping netMapping)  // 返回新行 ID (synchronized)
+Integer findAndAddNetMapping(String inter_face, int portbegin, int portend, NetMapping template)  // 原子查找+添加
 ```
 
 **编辑**:
@@ -927,7 +946,7 @@ QosLimit.ProtocolType.ANY = "any";
 | `cputemp` | `List<Integer>` | CPU 温度列表 |
 | `memory` | `Memory` | 内存信息 |
 | `stream` | `Stream` | 总流量信息 |
-| `online_user` | `Online_user` | 在线用户统计 |
+| `online_user` | `OnlineUser` | 在线用户统计 (@JsonProperty("online_user")) |
 | `uptime` | `long` | 系统运行时间 (秒) |
 | `hostname` | `String` | 路由器主机名 |
 | `gwid` | `String` | 网关 ID |
@@ -994,7 +1013,7 @@ HTTP POST → 检查 response.isSuccessful()
 | SSL/TLS | 信任所有证书 + 忽略主机名 | ⚠️ 中等 |
 | 密码传输 | MD5 哈希 + Base64 加盐编码 | ⚠️ 中等（MD5 已不推荐） |
 | 会话管理 | Cookie (`sess_key`) | ✅ 标准做法 |
-| 密码存储 | 运行时内存持有明文密码 | ⚠️ 低（主机本地） |
+| 密码存储 | 运行时 char[] 存储，提供 destroy() 主动清除 | ✅ 改进 |
 
 ### 10.2 TrustAllCert 说明
 
@@ -1029,7 +1048,7 @@ X509TrustManager trustManager = new X509TrustManager() {
 | **连接管理** | 每个 `RouterAgent` 实例持有独立的 `OkHttpClient`，同一节点复用连接池 |
 | **重试机制** | 网络错误或 API 失败直接抛出异常，无自动重试 |
 | **日志系统** | 无日志框架，调试信息通过 `System.out.println` 输出 |
-| **线程安全** | `cookieStore` 使用 `ConcurrentHashMap`，支持多线程环境 |
+| **线程安全** | `cookieStore` 使用 `ConcurrentHashMap`；端口查找/添加方法使用 `synchronized(portLock)` 保护（单 JVM 内原子性，多 JVM 需上层分布式锁） |
 | **iKuai 版本** | API 字段依赖特定 iKuai 固件版本，未做版本协商/兼容性检测 |
 
 ### 11.2 遗留代码

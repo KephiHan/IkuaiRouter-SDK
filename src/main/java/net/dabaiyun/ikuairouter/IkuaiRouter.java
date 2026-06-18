@@ -28,6 +28,9 @@ public class IkuaiRouter {
     private boolean isLogin = false;
     private boolean debug = false;
 
+    //Concurrency
+    private final Object portLock = new Object();
+
     //Construcs
 
     public IkuaiRouter(String address, int port, boolean https, String username, String pwd) throws Exception {
@@ -78,6 +81,15 @@ public class IkuaiRouter {
     public void setDebug(boolean debug) {
         this.debug = debug;
     }
+
+    /**
+     * 主动清除内存中的密码，释放敏感数据
+     * 调用后此实例不可再次 login
+     */
+    public void destroy() {
+        routerAgent.destroy();
+    }
+
 //================ Other Functions ==========================
 
 
@@ -152,16 +164,18 @@ public class IkuaiRouter {
      * @throws Exception 找不到可用端口
      */
     public int findAvailableNetMappingWanPort(String inter_face, int portbegin, int portend) throws Exception {
-        if (portbegin <= 0) portbegin = 1;
-        if (portend > 65535) portend = 65535;
-        List<NetMapping> netMappingList = this.getNetMappingList();
-        Set<Integer> usedPorts = parseUsedPorts(netMappingList, Arrays.asList(inter_face));
-        for (int port = portbegin; port <= portend; port++) {
-            if (!usedPorts.contains(port)) {
-                return port;
+        synchronized (portLock) {
+            if (portbegin <= 0) portbegin = 1;
+            if (portend > 65535) portend = 65535;
+            List<NetMapping> netMappingList = this.getNetMappingList();
+            Set<Integer> usedPorts = parseUsedPorts(netMappingList, Arrays.asList(inter_face));
+            for (int port = portbegin; port <= portend; port++) {
+                if (!usedPorts.contains(port)) {
+                    return port;
+                }
             }
+            throw new IkuaiRouterException("No available port found.");
         }
-        throw new IkuaiRouterException("No available port found.");
     }
 
     /**
@@ -174,16 +188,18 @@ public class IkuaiRouter {
      * @throws Exception 找不到可用端口
      */
     public int findAvailableNetMappingWanPortMultiInterface(List<String> toUseInterfaceList, int portbegin, int portend) throws Exception {
-        if (portbegin <= 0) portbegin = 1;
-        if (portend > 65535) portend = 65535;
-        List<NetMapping> netMappingList = this.getNetMappingList();
-        Set<Integer> usedPorts = parseUsedPorts(netMappingList, toUseInterfaceList);
-        for (int port = portbegin; port <= portend; port++) {
-            if (!usedPorts.contains(port)) {
-                return port;
+        synchronized (portLock) {
+            if (portbegin <= 0) portbegin = 1;
+            if (portend > 65535) portend = 65535;
+            List<NetMapping> netMappingList = this.getNetMappingList();
+            Set<Integer> usedPorts = parseUsedPorts(netMappingList, toUseInterfaceList);
+            for (int port = portbegin; port <= portend; port++) {
+                if (!usedPorts.contains(port)) {
+                    return port;
+                }
             }
+            throw new IkuaiRouterException("No available port found.");
         }
-        throw new IkuaiRouterException("No available port found.");
     }
 
     /**
@@ -724,12 +740,41 @@ public class IkuaiRouter {
      * @throws Exception ErrMsg
      */
     public Integer addNetMapping(NetMapping netMapping) throws Exception {
-        ResponseAdd responseAdd = routerAgent.addNetMapping(netMapping);
-        if (responseAdd.isSuccess()) {
-            netMapping.setId(responseAdd.getRowId());
-            return responseAdd.getRowId();
-        } else {
-            throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+        synchronized (portLock) {
+            ResponseAdd responseAdd = routerAgent.addNetMapping(netMapping);
+            if (responseAdd.isSuccess()) {
+                netMapping.setId(responseAdd.getRowId());
+                return responseAdd.getRowId();
+            } else {
+                throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+            }
+        }
+    }
+
+
+    /**
+     * 查找可用端口并立即创建映射（原子操作）
+     * 注意：此同步仅保证单 JVM 实例内的原子性，多 JVM 场景需上层分布式锁
+     *
+     * @param inter_face 上行接口
+     * @param portbegin  起始端口
+     * @param portend    结束端口
+     * @param template   NetMapping 模板（wan_port 将被自动设置）
+     * @return 新行 ID
+     * @throws Exception 找不到可用端口或添加失败
+     */
+    public Integer findAndAddNetMapping(String inter_face, int portbegin, int portend, NetMapping template) throws Exception {
+        synchronized (portLock) {
+            int port = findAvailableNetMappingWanPort(inter_face, portbegin, portend);
+            template.setWan_port(String.valueOf(port));
+            template.setInter_face(inter_face);
+            ResponseAdd responseAdd = routerAgent.addNetMapping(template);
+            if (responseAdd.isSuccess()) {
+                template.setId(responseAdd.getRowId());
+                return responseAdd.getRowId();
+            } else {
+                throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+            }
         }
     }
 

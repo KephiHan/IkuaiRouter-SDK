@@ -33,7 +33,7 @@ public class RouterAgent {
     private int port;
     private boolean https;
     private String username;
-    private String pwd;
+    private char[] pwd;
     //CookieStore
     private Map<String, List<Cookie>> cookieStore;
     //HTTP Client (reused across all requests for this agent instance)
@@ -51,7 +51,7 @@ public class RouterAgent {
         this.port = port;
         this.https = https;
         this.username = username;
-        this.pwd = pwd;
+        this.pwd = pwd.toCharArray();
         this.cookieStore = new ConcurrentHashMap<>();
         this.okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
     }
@@ -61,7 +61,7 @@ public class RouterAgent {
         this.port = port;
         this.https = https;
         this.username = username;
-        this.pwd = pwd;
+        this.pwd = pwd.toCharArray();
         this.cookieStore = new ConcurrentHashMap<>(cookieStore);
         this.okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(this.cookieStore);
     }
@@ -71,7 +71,7 @@ public class RouterAgent {
         this.port = port;
         this.https = https;
         this.username = username;
-        this.pwd = pwd;
+        this.pwd = pwd.toCharArray();
         //生成cookie存入store
         Cookie cookie = new Cookie.Builder()
                 .domain(address)
@@ -126,11 +126,11 @@ public class RouterAgent {
     }
 
     public String getPwd() {
-        return pwd;
+        return new String(pwd);
     }
 
     public void setPwd(String pwd) {
-        this.pwd = pwd;
+        this.pwd = pwd.toCharArray();
     }
 
     public boolean isHttps() {
@@ -159,7 +159,7 @@ public class RouterAgent {
      */
     public LoginResult login() throws Exception {
         //Check info are not null
-        if (!(address != null && port != 0 && username != null && pwd != null)) {
+        if (!(address != null && port != 0 && username != null && pwd != null && pwd.length > 0)) {
             return new LoginResult(0, "缺失认证表单数据");
         }
 
@@ -167,7 +167,8 @@ public class RouterAgent {
         String password;//md5hash Encoded string
         String pass;//Base64 Encoded string
         //getPass
-        String str = "salt_11" + pwd;
+        String pwdStr = new String(this.pwd);
+        String str = "salt_11" + pwdStr;
         pass = Base64.getEncoder().encodeToString(str.getBytes(StandardCharsets.UTF_8));
         //getPasswd
         // WARNING: MD5 is cryptographically weak. Used here because iKuai API protocol requires it.
@@ -179,7 +180,7 @@ public class RouterAgent {
             throw new IkuaiRouterNetworkException("Failed to initialize MD5 MessageDigest", e);
         }
         // Update MessageDigest with input text in bytes
-        md.update(pwd.getBytes(StandardCharsets.UTF_8));
+        md.update(pwdStr.getBytes(StandardCharsets.UTF_8));
         // Get the hashbytes
         byte[] hashBytes = md.digest();
         // Convert hash bytes to hex format
@@ -820,6 +821,17 @@ public class RouterAgent {
             throw e;
         } catch (Exception e) {
             throw new IkuaiRouterNetworkException("HTTP request failed", e);
+        }
+    }
+
+    /**
+     * 主动清除内存中的密码
+     * 调用后此实例不可再次 login
+     */
+    public void destroy() {
+        if (this.pwd != null) {
+            java.util.Arrays.fill(this.pwd, '\0');
+            this.pwd = null;
         }
     }
 }
