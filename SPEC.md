@@ -1043,7 +1043,7 @@ X509TrustManager trustManager = new X509TrustManager() {
 
 | 限制项 | 说明 |
 |--------|------|
-| **分页限制** | 默认 `limit=0,1000`，一次最多返回 1000 条记录 |
+| **分页限制** | 默认 `limit=0,1000`。API 支持通过 `TYPE:"data,total"` 获取记录总数（`Data.total` 字段），可实现分页遍历 |
 | **同步调用** | 所有 HTTP 调用为同步阻塞，无异步/响应式支持 |
 | **连接管理** | 每个 `RouterAgent` 实例持有独立的 `OkHttpClient`，同一节点复用连接池 |
 | **重试机制** | 网络错误或 API 失败直接抛出异常，无自动重试 |
