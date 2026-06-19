@@ -194,6 +194,10 @@ net.dabaiyun.ikuairouter
 | `IkuaiRouterAuthException` | - | 认证失败/会话过期异常 (Result=10014) |
 | `IkuaiRouterNetworkException` | - | HTTP 通信失败异常 |
 | `IkuaiRouterApiException` | - | API 业务失败异常（含 resultCode） |
+| `PPPUser` | - | 认证计费用户实体（30 字段） |
+| `PPPOnline` | - | 认证在线用户实体 |
+| `PPPPackage` | - | 计费套餐实体 |
+| `OpenVPNServer` | - | OpenVPN 服务端配置实体 |
 
 ---
 
@@ -276,6 +280,11 @@ net.dabaiyun.ikuairouter
 | `simple_qos` | 简单限速 | IP 级上行/下行带宽限制 |
 | `plugins` | 插件管理 | 系统已安装插件信息 |
 | `wan` | WAN 配置 | WAN 接口完整配置管理（预留，未实现方法） |
+| `pppuser` | 认证计费用户 | 用户 CRUD + 缴费记录 |
+| `ppp_online` | 认证在线用户 | 在线用户查询 |
+| `ppp_package` | 计费套餐 | 套餐 CRUD |
+| `pppoe_server` | PPPoE 服务器 | 接口列表查询 |
+| `openvpn_server` | OpenVPN 服务端 | 配置/状态查询（序列化为 openvpn-server） |
 
 ### 4.5 查询参数模式
 
