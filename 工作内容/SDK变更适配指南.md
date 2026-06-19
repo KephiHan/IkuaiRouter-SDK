@@ -129,6 +129,17 @@ pddNetMapping(
 使用场景: 替代原来的 findAvailableNetMappingWanPort() + addNetMapping() 两步调用，避免并发下端口冲突。
 注意: 仅保证单 JVM 实例内原子性，多 JVM 需上层分布式锁。
 
+多接口版本:
+
+public Integer findAndAddNetMappingMultiInterface(
+    List<String> interfaceList, // 上行接口列表
+    int portbegin,             // 起始端口
+    int portend,               // 结束端口
+    NetMapping template        // 模板
+) throws Exception
+
+区别: inter_face 将被设置为逗号拼接的接口列表(如 adsl1,adsl2)，端口在所有列表接口上都未被占用才可用。
+
 ---
 
 ### 3.4 getAllLanHostInfoList() —lose，异常时可能泄漏 | try-with-resources 确保关闭 |
@@ -171,7 +182,8 @@ new IkuaiRouter(String address, int port, boolean https, String username, String
 | void setLogger(IkuaiLogger logger) | 注入自定义日志实现 |
 | IkuaiLogger getLogger() | 获取当前日志实现 |
 | void destroy() | 清除密码，释放敏感数据 |
-| Integer findAndAddNetMapping(String, int, int, NetMapping) | 原子查找端口+添加映射 |
+| Integer findAndAddNetMapping(String, int, int, NetMapping) | 原子查找端口+添加映射（单接口） |
+| Integer findAndAddNetMappingMultiInterface(List<String>, int, int, N) | 原子查找端口+添加映射（多接口） |
 | List<LanHostInfo> getAllLanHostInfoList(int pageSize) | 分页全量获取 LAN 主机 |
 
 ---
