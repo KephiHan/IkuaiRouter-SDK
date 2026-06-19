@@ -303,6 +303,17 @@ public class RouterAgent {
     }
 
     /**
+     * Get LanHost Status with custom param (for pagination)
+     *
+     * @param param Custom RequestParamShow
+     * @return LanHostStatus jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getLanHostStatus(RequestParamShow param) throws Exception {
+        return new ResponseShow(executeAction(ActionType.show, FuncName.monitor_lanip, param));
+    }
+
+    /**
      * Get DHCPServers
      *
      * @return DHCPServers jsonString

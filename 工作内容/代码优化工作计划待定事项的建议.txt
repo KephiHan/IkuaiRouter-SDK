@@ -2,3 +2,13 @@
 
 上层业务平台项目目录；D:\OpenCodeWorkSpace\FreeMyKvm_v4.0
 可通过其SPEC目录下的文件了解项目背景，查看代码以了解项目日志框架、会话续期机制、分页机制。
+
+A. 日志抽象层设计
+根据FreeMyKvm_v4.0的日志框架，设计可以兼容的日志抽象层；
+
+B. 会话自动续期
+根据FreeMyKvm_v4.0的IkuaiRouter相关接口（主要是Factory）分析sesskey过期处理机制，在 `executeAction` 中检测 `Result==10014` 时自动 `login()` 并重试一次是否有必要。
+
+C. 分页机制
+`RequestParamShow` 的 `TYPE` 字段支持传入 `"data,total"` 格式（逗号分隔多类型）
+需要分析这一改动是否会影响函数调用链

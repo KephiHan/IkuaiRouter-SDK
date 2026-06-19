@@ -7,6 +7,8 @@ import net.dabaiyun.ikuairouter.Action.*;
 import net.dabaiyun.ikuairouter.Entity.*;
 import net.dabaiyun.ikuairouter.Entity.sysstat.SystemStatus;
 import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
+import net.dabaiyun.ikuairouter.Log.ConsoleIkuaiLogger;
+import net.dabaiyun.ikuairouter.Log.IkuaiLogger;
 import net.dabaiyun.ikuairouter.Util.IpAddrUtil;
 import okhttp3.Cookie;
 
@@ -30,6 +32,9 @@ public class IkuaiRouter {
 
     //Concurrency
     private final Object portLock = new Object();
+
+    //Logger
+    private IkuaiLogger logger = new ConsoleIkuaiLogger();
 
     //Construcs
 
@@ -80,6 +85,21 @@ public class IkuaiRouter {
 
     public void setDebug(boolean debug) {
         this.debug = debug;
+    }
+
+    /**
+     * 设置自定义日志实现
+     * 默认使用 ConsoleIkuaiLogger（stdout 输出）
+     * 生产环境建议注入 SLF4J 桥接实现
+     *
+     * @param logger 日志实现
+     */
+    public void setLogger(IkuaiLogger logger) {
+        this.logger = logger;
+    }
+
+    public IkuaiLogger getLogger() {
+        return logger;
     }
 
     /**
@@ -574,6 +594,29 @@ public class IkuaiRouter {
                 new TypeReference<List<LanHostInfo>>() {
                 }
         );
+    }
+
+    /**
+     * 分页获取全量 LanHostInfo 列表
+     * 通过 TYPE="data,total" 获取总数，循环翻页直到取完
+     *
+     * @param pageSize 每页数量
+     * @return 全量 LanHostInfo List
+     * @throws Exception ex
+     */
+    public List<LanHostInfo> getAllLanHostInfoList(int pageSize) throws Exception {
+        List<LanHostInfo> allData = new ArrayList<>();
+        int offset = 0;
+        int total;
+        do {
+            RequestParamShow param = new RequestParamShow("data,total", offset + "," + pageSize);
+            ResponseShow responseShow = routerAgent.getLanHostStatus(param);
+            total = getTotal(responseShow);
+            List<LanHostInfo> page = parseData(responseShow, "data", new TypeReference<List<LanHostInfo>>() {});
+            allData.addAll(page);
+            offset += pageSize;
+        } while (offset < total);
+        return allData;
     }
 
     /**
@@ -1164,6 +1207,19 @@ public class IkuaiRouter {
     //================ Private Functions ==========================
 
     /**
+     * 从 ResponseShow 中解析 total 字段
+     *
+     * @param response ResponseShow 响应对象
+     * @return total 值，如果不存在返回 -1
+     * @throws Exception e
+     */
+    private int getTotal(ResponseShow response) throws Exception {
+        JsonNode dataNode = objectMapper.readTree(response.getData());
+        JsonNode totalNode = dataNode.get("total");
+        return totalNode != null ? totalNode.asInt() : -1;
+    }
+
+    /**
      * 统一解析 ResponseShow 中的 JSON 数据
      *
      * @param response ResponseShow 响应对象
@@ -1239,7 +1295,7 @@ public class IkuaiRouter {
      */
     private void log(String msg) {
         if (debug) {
-            System.out.println(msg);
+            logger.debug(msg);
         }
     }
 

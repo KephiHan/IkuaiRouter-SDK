@@ -27,6 +27,20 @@ public class RequestParamShow {
         this.type = type;
     }
 
+    /**
+     * 支持自定义 type 和 limit 的构造函数
+     * 用于分页查询场景，如 type="data,total", limit="0,20"
+     *
+     * @param type  TYPE 字段（支持逗号分隔多类型，如 "data,total"）
+     * @param limit 分页参数（格式 "offset,count"，如 "0,20"）
+     */
+    public RequestParamShow(String type, String limit) {
+        this.limit = limit;
+        this.order = "";
+        this.orderBy = "";
+        this.type = type;
+    }
+
 //    public RequestParamShow(boolean isDefaultParams) {
 //        if(isDefaultParams){
 //            this.limit = "0,100";
