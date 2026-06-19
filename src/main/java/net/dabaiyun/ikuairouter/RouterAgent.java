@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import net.dabaiyun.ikuairouter.Action.*;
 import net.dabaiyun.ikuairouter.Entity.DHCPStatic;
 import net.dabaiyun.ikuairouter.Entity.NetMapping;
+import net.dabaiyun.ikuairouter.Entity.PPPPackage;
+import net.dabaiyun.ikuairouter.Entity.PPPUser;
 import net.dabaiyun.ikuairouter.Entity.QosLimit;
 import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
 import net.dabaiyun.ikuairouter.Exception.IkuaiRouterAuthException;
@@ -754,6 +756,217 @@ public class RouterAgent {
                 ),
                 ResponseDel.class
         );
+    }
+
+
+    //================ PPP User Functions ==========================
+
+    /**
+     * Get PPP User List
+     *
+     * @return PPPUser list jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPUsers() throws Exception {
+        RequestParamShow param = new RequestParamShow("total,data");
+        return new ResponseShow(executeAction(ActionType.show, FuncName.pppuser, param));
+    }
+
+    /**
+     * Get PPP User List with custom param
+     *
+     * @param param Custom RequestParamShow
+     * @return PPPUser list jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPUsers(RequestParamShow param) throws Exception {
+        return new ResponseShow(executeAction(ActionType.show, FuncName.pppuser, param));
+    }
+
+    /**
+     * Add PPP User
+     *
+     * @param pppUser PPPUser Object
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseAdd addPPPUser(PPPUser pppUser) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.add, FuncName.pppuser, pppUser),
+                ResponseAdd.class
+        );
+    }
+
+    /**
+     * Edit PPP User
+     *
+     * @param pppUser PPPUser Object
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseEdit editPPPUser(PPPUser pppUser) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.edit, FuncName.pppuser, pppUser),
+                ResponseEdit.class
+        );
+    }
+
+    /**
+     * Down PPP User by id
+     *
+     * @param id Target ID
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseDown downPPPUser(int id) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.down, FuncName.pppuser, new RequestParamDown(id)),
+                ResponseDown.class
+        );
+    }
+
+    /**
+     * Delete PPP User by id
+     *
+     * @param id Target ID
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseDel delPPPUser(int id) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.del, FuncName.pppuser, new RequestParamDel(id)),
+                ResponseDel.class
+        );
+    }
+
+    //================ PPP Online Functions ==========================
+
+    /**
+     * Get PPP Online Users
+     *
+     * @return PPP online users jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPOnlineUsers() throws Exception {
+        RequestParamShow param = new RequestParamShow("data,total");
+        return new ResponseShow(executeAction(ActionType.show, FuncName.ppp_online, param));
+    }
+
+    /**
+     * Get PPP Online Users with custom param
+     *
+     * @param param Custom RequestParamShow
+     * @return PPP online users jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPOnlineUsers(RequestParamShow param) throws Exception {
+        return new ResponseShow(executeAction(ActionType.show, FuncName.ppp_online, param));
+    }
+
+    //================ PPP Package Functions ==========================
+
+    /**
+     * Get PPP Package List
+     *
+     * @return PPP package list jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPPackages() throws Exception {
+        RequestParamShow param = new RequestParamShow("total,data");
+        return new ResponseShow(executeAction(ActionType.show, FuncName.ppp_package, param));
+    }
+
+    /**
+     * Get PPP Package List with custom param
+     *
+     * @param param Custom RequestParamShow
+     * @return PPP package list jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPPackages(RequestParamShow param) throws Exception {
+        return new ResponseShow(executeAction(ActionType.show, FuncName.ppp_package, param));
+    }
+
+    /**
+     * Add PPP Package
+     *
+     * @param pppPackage PPPPackage Object
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseAdd addPPPPackage(PPPPackage pppPackage) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.add, FuncName.ppp_package, pppPackage),
+                ResponseAdd.class
+        );
+    }
+
+    /**
+     * Edit PPP Package
+     *
+     * @param pppPackage PPPPackage Object
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseEdit editPPPPackage(PPPPackage pppPackage) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.edit, FuncName.ppp_package, pppPackage),
+                ResponseEdit.class
+        );
+    }
+
+    /**
+     * Down PPP Package by id
+     *
+     * @param id Target ID
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseDown downPPPPackage(int id) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.down, FuncName.ppp_package, new RequestParamDown(id)),
+                ResponseDown.class
+        );
+    }
+
+    /**
+     * Delete PPP Package by id
+     *
+     * @param id Target ID
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseDel delPPPPackage(int id) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.del, FuncName.ppp_package, new RequestParamDel(id)),
+                ResponseDel.class
+        );
+    }
+
+    //================ OpenVPN Server Functions ==========================
+
+    /**
+     * Get OpenVPN Server Config
+     *
+     * @return OpenVPN server config jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getOpenVPNServerConfig() throws Exception {
+        RequestParamShow param = new RequestParamShow("data");
+        return new ResponseShow(executeAction(ActionType.show, FuncName.openvpn_server, param));
+    }
+
+    //================ PPPoE Server Functions ==========================
+
+    /**
+     * Get PPPoE Server Interface
+     *
+     * @return PPPoE server interface jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPoEServerInterface() throws Exception {
+        RequestParamShow param = new RequestParamShow("interface");
+        return new ResponseShow(executeAction(ActionType.show, FuncName.pppoe_server, param));
     }
 
 

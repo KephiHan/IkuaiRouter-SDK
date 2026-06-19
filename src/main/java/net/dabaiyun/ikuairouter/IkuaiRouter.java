@@ -1231,6 +1231,241 @@ public class IkuaiRouter {
         return true;
     }
 
+    //================ PPP User Functions ==========================
+
+    /**
+     * 获取 PPP 用户列表
+     *
+     * @return PPPUser List
+     * @throws Exception ex
+     */
+    public List<PPPUser> getPPPUserList() throws Exception {
+        return parseData(
+                routerAgent.getPPPUsers(),
+                "data",
+                new TypeReference<List<PPPUser>>() {
+                }
+        );
+    }
+
+    /**
+     * 分页获取全量 PPP 用户列表
+     *
+     * @param pageSize 每页数量
+     * @return 全量 PPPUser List
+     * @throws Exception ex
+     */
+    public List<PPPUser> getAllPPPUserList(int pageSize) throws Exception {
+        List<PPPUser> allData = new ArrayList<>();
+        int offset = 0;
+        int total;
+        do {
+            RequestParamShow param = new RequestParamShow("total,data", offset + "," + pageSize);
+            ResponseShow responseShow = routerAgent.getPPPUsers(param);
+            total = getTotal(responseShow);
+            List<PPPUser> page = parseData(responseShow, "data", new TypeReference<List<PPPUser>>() {});
+            allData.addAll(page);
+            offset += pageSize;
+        } while (offset < total);
+        return allData;
+    }
+
+    /**
+     * 根据 ID 获取 PPP 用户
+     *
+     * @param id Target ID
+     * @return PPPUser Object or null
+     * @throws Exception ex
+     */
+    public PPPUser getPPPUserById(int id) throws Exception {
+        RequestParamFind param = new RequestParamFind("data");
+        param.setFinds(RequestParamFind.FINDS_ID);
+        param.setKeywords(String.valueOf(id));
+        List<PPPUser> pppUserList = parseData(
+                routerAgent.getPPPUsers(param),
+                "data",
+                new TypeReference<List<PPPUser>>() {
+                }
+        );
+        for (PPPUser pppUser : pppUserList) {
+            if (pppUser.getId() == id) {
+                return pppUser;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据用户名获取 PPP 用户
+     *
+     * @param username 用户名
+     * @return PPPUser Object or null
+     * @throws Exception ex
+     */
+    public PPPUser getPPPUserByUsername(String username) throws Exception {
+        RequestParamFind param = new RequestParamFind("data");
+        param.setFinds("username");
+        param.setKeywords(username);
+        List<PPPUser> pppUserList = parseData(
+                routerAgent.getPPPUsers(param),
+                "data",
+                new TypeReference<List<PPPUser>>() {
+                }
+        );
+        for (PPPUser pppUser : pppUserList) {
+            if (pppUser.getUsername().equals(username)) {
+                return pppUser;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 添加 PPP 用户
+     *
+     * @param pppUser PPPUser Object
+     * @return NewRowId
+     * @throws Exception ErrMsg
+     */
+    public Integer addPPPUser(PPPUser pppUser) throws Exception {
+        ResponseAdd responseAdd = routerAgent.addPPPUser(pppUser);
+        if (responseAdd.isSuccess()) {
+            pppUser.setId(responseAdd.getRowId());
+            return responseAdd.getRowId();
+        } else {
+            throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+        }
+    }
+
+    /**
+     * 编辑 PPP 用户
+     *
+     * @param pppUser PPPUser Object
+     * @return 编辑是否成功
+     * @throws Exception ErrMsg
+     */
+    public boolean editPPPUser(PPPUser pppUser) throws Exception {
+        IkuaiResponseBase response = routerAgent.editPPPUser(pppUser);
+        return response.isSuccess();
+    }
+
+    /**
+     * 禁用 PPP 用户
+     *
+     * @param id Target ID
+     * @return 禁用是否成功
+     * @throws Exception ErrMsg
+     */
+    public boolean downPPPUserById(int id) throws Exception {
+        IkuaiResponseBase response = routerAgent.downPPPUser(id);
+        return response.isSuccess();
+    }
+
+    /**
+     * 删除 PPP 用户
+     *
+     * @param id Target ID
+     * @return 删除是否成功
+     * @throws Exception ErrMsg
+     */
+    public boolean delPPPUserById(int id) throws Exception {
+        IkuaiResponseBase response = routerAgent.delPPPUser(id);
+        return response.isSuccess();
+    }
+
+    //================ PPP Online Functions ==========================
+
+    /**
+     * 获取 PPP 在线用户列表
+     *
+     * @return PPPOnline List
+     * @throws Exception ex
+     */
+    public List<PPPOnline> getPPPOnlineList() throws Exception {
+        return parseData(
+                routerAgent.getPPPOnlineUsers(),
+                "data",
+                new TypeReference<List<PPPOnline>>() {
+                }
+        );
+    }
+
+    //================ PPP Package Functions ==========================
+
+    /**
+     * 获取 PPP 套餐列表
+     *
+     * @return PPPPackage List
+     * @throws Exception ex
+     */
+    public List<PPPPackage> getPPPPackageList() throws Exception {
+        return parseData(
+                routerAgent.getPPPPackages(),
+                "data",
+                new TypeReference<List<PPPPackage>>() {
+                }
+        );
+    }
+
+    /**
+     * 添加 PPP 套餐
+     *
+     * @param pppPackage PPPPackage Object
+     * @return NewRowId
+     * @throws Exception ErrMsg
+     */
+    public Integer addPPPPackage(PPPPackage pppPackage) throws Exception {
+        ResponseAdd responseAdd = routerAgent.addPPPPackage(pppPackage);
+        if (responseAdd.isSuccess()) {
+            pppPackage.setId(responseAdd.getRowId());
+            return responseAdd.getRowId();
+        } else {
+            throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+        }
+    }
+
+    /**
+     * 编辑 PPP 套餐
+     *
+     * @param pppPackage PPPPackage Object
+     * @return 编辑是否成功
+     * @throws Exception ErrMsg
+     */
+    public boolean editPPPPackage(PPPPackage pppPackage) throws Exception {
+        IkuaiResponseBase response = routerAgent.editPPPPackage(pppPackage);
+        return response.isSuccess();
+    }
+
+    /**
+     * 删除 PPP 套餐
+     *
+     * @param id Target ID
+     * @return 删除是否成功
+     * @throws Exception ErrMsg
+     */
+    public boolean delPPPPackageById(int id) throws Exception {
+        IkuaiResponseBase response = routerAgent.delPPPPackage(id);
+        return response.isSuccess();
+    }
+
+    //================ OpenVPN Server Functions ==========================
+
+    /**
+     * 获取 OpenVPN Server 配置
+     *
+     * @return OpenVPNServer Object or null
+     * @throws Exception ex
+     */
+    public OpenVPNServer getOpenVPNServerConfig() throws Exception {
+        List<OpenVPNServer> list = parseData(
+                routerAgent.getOpenVPNServerConfig(),
+                "data",
+                new TypeReference<List<OpenVPNServer>>() {
+                }
+        );
+        return list != null && !list.isEmpty() ? list.get(0) : null;
+    }
+
     //================ Private Functions ==========================
 
     /**
