@@ -106,9 +106,23 @@ PPPOnline 实体字段:
 
 ```
 PPPPackage 实体字段:
-- (HAR 中 data 为空数组，字段待后续补充)
-- 已知查询参数: FINDS:"packname", KEYWORDS, TYPE:"data", limit:"0,100"
+- id: int                 套餐 ID
+- packname: String        套餐名称
+- packtime: String        套餐时长 (如 "8d"=8天, "30d"=30天)
+- price: int              套餐价格 (元)
+- up_speed: int           上传限速 (Kbps)
+- down_speed: int         下载限速 (Kbps)
+- comment: String         备注
 ```
+
+### 4.2 支持的操作
+
+| action | 说明 | 参数 |
+|--------|------|------|
+| show | 查询套餐列表 | TYPE:"total,data", limit |
+| add | 新增套餐 | packname, packtime, price, up_speed, down_speed, comment |
+| edit | 编辑套餐 | id + 全部字段 |
+| del | 删除套餐 | id |
 
 ---
 
