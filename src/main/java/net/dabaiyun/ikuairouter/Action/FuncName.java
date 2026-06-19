@@ -8,6 +8,8 @@ public enum FuncName {
     monitor_lanip,
     //LAN
     lan,
+    //WAN
+    wan,
     //DHCP Settings
     dhcp_server,
     //DHCP_Static_Allocate

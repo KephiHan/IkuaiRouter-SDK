@@ -18,6 +18,7 @@ public class NetMapping {
     private String enabled;
     private long   lan_addr_int;
     private String comment;
+    private String src_addr;
 
     //Static Values
 
@@ -105,6 +106,14 @@ public class NetMapping {
         this.comment = comment;
     }
 
+    public String getSrc_addr() {
+        return src_addr;
+    }
+
+    public void setSrc_addr(String src_addr) {
+        this.src_addr = src_addr;
+    }
+
     @Override
     public String toString() {
         return "NetMapping{" +
@@ -117,6 +126,7 @@ public class NetMapping {
                 ", enabled='" + enabled + '\'' +
                 ", lan_addr_int=" + lan_addr_int +
                 ", comment='" + comment + '\'' +
+                ", src_addr='" + src_addr + '\'' +
                 '}';
     }
 }
