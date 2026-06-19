@@ -821,6 +821,33 @@ public class IkuaiRouter {
         }
     }
 
+    /**
+     * 查找可用端口并立即创建映射 - 多接口版本（原子操作）
+     * 在多个接口上查找未被占用的端口，找到后立即创建映射
+     * 注意：此同步仅保证单 JVM 实例内的原子性，多 JVM 场景需上层分布式锁
+     *
+     * @param interfaceList 上行接口列表
+     * @param portbegin     起始端口
+     * @param portend       结束端口
+     * @param template      NetMapping 模板（wan_port 和 inter_face 将被自动设置）
+     turn 新行 ID
+     * @throws Exception 找不到可用端口或添加失败
+     */
+    public Integer findAndAddNetMappingMultiInterface(List<String> interfaceList, int portbegin, int portend, NetMapping template) throws Exception {
+        synchronized (portLock) {
+            int port = findAvailableNetMappingWanPortMultiInterface(interfaceList, portbegin, portend);
+            template.setWan_port(String.valueOf(port));
+            template.setInter_face(String.join(",", interfaceList));
+            ResponseAdd responseAdd = routerAgent.addNetMapping(template);
+            if (responseAdd.isSuccess()) {
+                template.setId(responseAdd.getRowId());
+                return responseAdd.getRowId();
+            } else {
+                throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+            }
+        }
+    }
+
 
     //================ Editer Functions ==========================
 
