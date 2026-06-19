@@ -275,6 +275,7 @@ net.dabaiyun.ikuairouter
 | `dnat` | 端口映射 | DNAT 目的地址转换规则 |
 | `simple_qos` | 简单限速 | IP 级上行/下行带宽限制 |
 | `plugins` | 插件管理 | 系统已安装插件信息 |
+| `wan` | WAN 配置 | WAN 接口完整配置管理（预留，未实现方法） |
 
 ### 4.5 查询参数模式
 
@@ -803,6 +804,7 @@ DHCPStatic.EnabledType.NO = "no";
 | `lan_addr_int` | `long` | 内网 IP 整型表示 |
 | `enabled` | `String` | 是否启用 ("yes"/"no") |
 | `comment` | `String` | 备注 |
+| `src_addr` | `String` | 源地址限制（空字符串=不限制，支持逗号分隔多 IP） |
 
 **常量**:
 ```java
