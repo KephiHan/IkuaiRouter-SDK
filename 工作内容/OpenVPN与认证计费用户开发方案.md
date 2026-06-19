@@ -148,7 +148,7 @@ OpenVPNServer 实体字段:
 - push_dns: String        推送 DNS
 - extra_config: String    额外配置
 - key: String             RSA 私钥
-- (status 字段结构待补充)
+- status: int             服务器状态 (0=关闭, 1=开启)
 ```
 
 ### 5.2 支持的操作
