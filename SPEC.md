@@ -1,6 +1,6 @@
 # IkuaiRouter-SDK 软件工程规格说明书 (SPEC)
 
-> 版本: 3.5.3T02 | 语言: Java 11 | 构建: Maven
+> 版本: 3.5.5 | 语言: Java 11 | 构建: Maven
 
 ---
 
@@ -27,7 +27,7 @@
 | 元数据 | 值 |
 |--------|-----|
 | **项目名称** | IkuaiRouter-SDK |
-| **版本** | 3.5.3T02 |
+| **版本** | 3.5.5 |
 | **GroupId** | net.dabaiyun |
 | **ArtifactId** | IkuaiRouter-SDK |
 | **开发语言** | Java 11 |
@@ -703,7 +703,7 @@ String findAvailableIpAddr(String gateway, int netmaskBit, String ip_begin, Stri
 
 | 方法 | 说明 |
 |------|------|
-| `isIpVaild(String str)` | 正则校验 IPv4 地址格式 |
+| `isIpValid(String str)` | 正则校验 IPv4 地址格式 |
 | `isMaskBitVaild(int maskBit)` | 校验掩码位数是否在 1-32 范围 |
 | `isIpInRange(String ip, String cidr)` | 判断 IP 是否在指定 CIDR 网段内 |
 
@@ -1314,12 +1314,43 @@ router.getInterfaceStreamList(); // 流量统计
 router.getLanHostInfoList();   // 在线主机
 router.getLanHostInfoByIpAddr("192.168.1.100"); // 按IP查主机
 router.getLanHostInfoByMAC("aa:bb:cc:dd:ee:ff"); // 按MAC查主机
+router.getAllLanHostInfoList(100);  // 分页全量获取在线主机
+
+// === 认证计费用户 (v3.5.5+) ===
+router.getPPPUserList();                     // 用户列表
+router.getAllPPPUserList(100);               // 分页全量获取
+router.getPPPUserById(7);                    // 按ID查询
+router.getPPPUserByUsername("Test123");      // 按用户名查询
+router.addPPPUser(new PPPUser());            // 新增用户
+router.editPPPUser(pppUser);                 // 编辑用户
+router.downPPPUserById(7);                   // 禁用用户
+router.delPPPUserById(7);                    // 删除用户
+router.getPPPOnlineList();                   // 在线认证用户
+
+// === 计费套餐 (v3.5.5+) ===
+router.getPPPPackageList();                  // 套餐列表
+router.addPPPPackage(new PPPPackage());      // 新增套餐
+router.editPPPPackage(pppPackage);           // 编辑套餐
+router.delPPPPackageById(1);                 // 删除套餐
+
+// === OpenVPN (v3.5.5+) ===
+router.getOpenVPNServerConfig();             // 服务端配置和状态
+
+// === 并发安全的端口分配 (v3.5.5+) ===
+router.findAndAddNetMapping("wan1", 30000, 31000, template);
+router.findAndAddNetMappingMultiInterface(interfaceList, 30000, 31000, template);
+
+// === 日志注入 (v3.5.5+) ===
+router.setLogger(customIkuaiLogger);
+
+// === 资源释放 (v3.5.5+) ===
+router.destroy();              // 清除内存中的密码
 ```
 
 ### B.2 IP 工具速查
 
 ```java
-IpAddrUtil.isIpVaild("192.168.1.1");               // true
+IpAddrUtil.isIpValid("192.168.1.1");               // true
 IpAddrUtil.parseIpFromStringToLong("192.168.1.1"); // 3232235777L
 IpAddrUtil.parseIpFromLongToString(3232235777L);   // "192.168.1.1"
 IpAddrUtil.isIpInRange("192.168.1.100", "192.168.1.0/24");  // true
