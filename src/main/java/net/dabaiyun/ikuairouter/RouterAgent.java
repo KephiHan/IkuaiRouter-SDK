@@ -5,8 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import net.dabaiyun.ikuairouter.Action.*;
 import net.dabaiyun.ikuairouter.Entity.DHCPStatic;
 import net.dabaiyun.ikuairouter.Entity.NetMapping;
+import net.dabaiyun.ikuairouter.Entity.PPPPackage;
+import net.dabaiyun.ikuairouter.Entity.PPPUser;
 import net.dabaiyun.ikuairouter.Entity.QosLimit;
 import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
+import net.dabaiyun.ikuairouter.Exception.IkuaiRouterAuthException;
+import net.dabaiyun.ikuairouter.Exception.IkuaiRouterNetworkException;
+import net.dabaiyun.ikuairouter.Exception.IkuaiRouterApiException;
 import net.dabaiyun.ikuairouter.HttpApi.TrustAllCertOkHttpClient;
 import okhttp3.*;
 
@@ -16,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RouterAgent {
     //Tools
@@ -28,13 +35,16 @@ public class RouterAgent {
     private int port;
     private boolean https;
     private String username;
-    private String pwd;
+    private char[] pwd;
     //CookieStore
-    private HashMap<String, List<Cookie>> cookieStore;
+    private Map<String, List<Cookie>> cookieStore;
+    //HTTP Client (reused across all requests for this agent instance)
+    private final OkHttpClient okHttpClient;
 
     //Default constructor
     public RouterAgent() {
-        cookieStore = new HashMap<>();
+        cookieStore = new ConcurrentHashMap<>();
+        this.okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
     }
 
     //Constructor with base info
@@ -43,8 +53,9 @@ public class RouterAgent {
         this.port = port;
         this.https = https;
         this.username = username;
-        this.pwd = pwd;
-        this.cookieStore = new HashMap<>();
+        this.pwd = pwd.toCharArray();
+        this.cookieStore = new ConcurrentHashMap<>();
+        this.okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
     }
 
     public RouterAgent(String address, int port, boolean https, String username, String pwd, HashMap<String, List<Cookie>> cookieStore) {
@@ -52,8 +63,9 @@ public class RouterAgent {
         this.port = port;
         this.https = https;
         this.username = username;
-        this.pwd = pwd;
-        this.cookieStore = cookieStore;
+        this.pwd = pwd.toCharArray();
+        this.cookieStore = new ConcurrentHashMap<>(cookieStore);
+        this.okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(this.cookieStore);
     }
 
     public RouterAgent(String address, int port, boolean https, String username, String pwd, String sess_key) {
@@ -61,7 +73,7 @@ public class RouterAgent {
         this.port = port;
         this.https = https;
         this.username = username;
-        this.pwd = pwd;
+        this.pwd = pwd.toCharArray();
         //生成cookie存入store
         Cookie cookie = new Cookie.Builder()
                 .domain(address)
@@ -72,8 +84,9 @@ public class RouterAgent {
                 .build();
         List<Cookie> cookieList = new ArrayList<>();
         cookieList.add(cookie);
-        cookieStore = new HashMap<>();
+        cookieStore = new ConcurrentHashMap<>();
         cookieStore.put(address, cookieList);
+        this.okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
     }
 
     //Getter && Setter
@@ -115,11 +128,11 @@ public class RouterAgent {
     }
 
     public String getPwd() {
-        return pwd;
+        return new String(pwd);
     }
 
     public void setPwd(String pwd) {
-        this.pwd = pwd;
+        this.pwd = pwd.toCharArray();
     }
 
     public boolean isHttps() {
@@ -130,11 +143,11 @@ public class RouterAgent {
         this.https = https;
     }
 
-    public HashMap<String, List<Cookie>> getCookieStore() {
+    public Map<String, List<Cookie>> getCookieStore() {
         return cookieStore;
     }
 
-    public void setCookieStore(HashMap<String, List<Cookie>> cookieStore) {
+    public void setCookieStore(Map<String, List<Cookie>> cookieStore) {
         this.cookieStore = cookieStore;
     }
 
@@ -148,7 +161,7 @@ public class RouterAgent {
      */
     public LoginResult login() throws Exception {
         //Check info are not null
-        if (!(address != null && port != 0 && username != null && pwd != null)) {
+        if (!(address != null && port != 0 && username != null && pwd != null && pwd.length > 0)) {
             return new LoginResult(0, "缺失认证表单数据");
         }
 
@@ -156,13 +169,20 @@ public class RouterAgent {
         String password;//md5hash Encoded string
         String pass;//Base64 Encoded string
         //getPass
-        String str = "salt_11" + pwd;
+        String pwdStr = new String(this.pwd);
+        String str = "salt_11" + pwdStr;
         pass = Base64.getEncoder().encodeToString(str.getBytes(StandardCharsets.UTF_8));
         //getPasswd
-        // MessageDigest instance for MD5
-        MessageDigest md = MessageDigest.getInstance("MD5");
+        // WARNING: MD5 is cryptographically weak. Used here because iKuai API protocol requires it.
+        // This is NOT a security recommendation - it's a compatibility constraint.
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("MD5");
+        } catch (Exception e) {
+            throw new IkuaiRouterNetworkException("Failed to initialize MD5 MessageDigest", e);
+        }
         // Update MessageDigest with input text in bytes
-        md.update(pwd.getBytes(StandardCharsets.UTF_8));
+        md.update(pwdStr.getBytes(StandardCharsets.UTF_8));
         // Get the hashbytes
         byte[] hashBytes = md.digest();
         // Convert hash bytes to hex format
@@ -187,14 +207,17 @@ public class RouterAgent {
                         ":" + port +
                         "/Action/login";
 
-        OkHttpClient okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
-
         MediaType JSONType = MediaType.parse("application/json; charset=utf-8");
 
-        RequestBody requestBody = RequestBody.create(
-                objectMapper.writeValueAsString(ikuaiLoginPostInfo),
-                JSONType
-        );
+        RequestBody requestBody;
+        try {
+            requestBody = RequestBody.create(
+                    objectMapper.writeValueAsString(ikuaiLoginPostInfo),
+                    JSONType
+            );
+        } catch (Exception e) {
+            throw new IkuaiRouterNetworkException("Failed to serialize login request", e);
+        }
 
         Request request = new Request.Builder()
                 .url(url_login)
@@ -203,17 +226,25 @@ public class RouterAgent {
 
         Call call = okHttpClient.newCall(request);
 
-        Response response = call.execute();
+        try (Response response = call.execute()) {
+            ResponseBody body = response.body();
+            if (body == null) {
+                throw new IkuaiRouterNetworkException("Login response body is null");
+            }
+            String response_string = body.string();
 
-        String response_string = response.body().string();
+            LoginResult loginResult = objectMapper.readValue(
+                    response_string,
+                    new TypeReference<LoginResult>() {
+                    }
+            );
 
-        LoginResult loginResult = objectMapper.readValue(
-                response_string,
-                new TypeReference<LoginResult>() {
-                }
-        );
-
-        return loginResult;
+            return loginResult;
+        } catch (IkuaiRouterException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IkuaiRouterNetworkException("Login HTTP request failed", e);
+        }
     }
 
 
@@ -270,6 +301,17 @@ public class RouterAgent {
         //Params Object
         RequestParamShow param = new RequestParamShow("data");
         //do post
+        return new ResponseShow(executeAction(ActionType.show, FuncName.monitor_lanip, param));
+    }
+
+    /**
+     * Get LanHost Status with custom param (for pagination)
+     *
+     * @param param Custom RequestParamShow
+     * @return LanHostStatus jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getLanHostStatus(RequestParamShow param) throws Exception {
         return new ResponseShow(executeAction(ActionType.show, FuncName.monitor_lanip, param));
     }
 
@@ -717,6 +759,217 @@ public class RouterAgent {
     }
 
 
+    //================ PPP User Functions ==========================
+
+    /**
+     * Get PPP User List
+     *
+     * @return PPPUser list jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPUsers() throws Exception {
+        RequestParamShow param = new RequestParamShow("total,data");
+        return new ResponseShow(executeAction(ActionType.show, FuncName.pppuser, param));
+    }
+
+    /**
+     * Get PPP User List with custom param
+     *
+     * @param param Custom RequestParamShow
+     * @return PPPUser list jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPUsers(RequestParamShow param) throws Exception {
+        return new ResponseShow(executeAction(ActionType.show, FuncName.pppuser, param));
+    }
+
+    /**
+     * Add PPP User
+     *
+     * @param pppUser PPPUser Object
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseAdd addPPPUser(PPPUser pppUser) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.add, FuncName.pppuser, pppUser),
+                ResponseAdd.class
+        );
+    }
+
+    /**
+     * Edit PPP User
+     *
+     * @param pppUser PPPUser Object
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseEdit editPPPUser(PPPUser pppUser) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.edit, FuncName.pppuser, pppUser),
+                ResponseEdit.class
+        );
+    }
+
+    /**
+     * Down PPP User by id
+     *
+     * @param id Target ID
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseDown downPPPUser(int id) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.down, FuncName.pppuser, new RequestParamDown(id)),
+                ResponseDown.class
+        );
+    }
+
+    /**
+     * Delete PPP User by id
+     *
+     * @param id Target ID
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseDel delPPPUser(int id) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.del, FuncName.pppuser, new RequestParamDel(id)),
+                ResponseDel.class
+        );
+    }
+
+    //================ PPP Online Functions ==========================
+
+    /**
+     * Get PPP Online Users
+     *
+     * @return PPP online users jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPOnlineUsers() throws Exception {
+        RequestParamShow param = new RequestParamShow("data,total");
+        return new ResponseShow(executeAction(ActionType.show, FuncName.ppp_online, param));
+    }
+
+    /**
+     * Get PPP Online Users with custom param
+     *
+     * @param param Custom RequestParamShow
+     * @return PPP online users jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPOnlineUsers(RequestParamShow param) throws Exception {
+        return new ResponseShow(executeAction(ActionType.show, FuncName.ppp_online, param));
+    }
+
+    //================ PPP Package Functions ==========================
+
+    /**
+     * Get PPP Package List
+     *
+     * @return PPP package list jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPPackages() throws Exception {
+        RequestParamShow param = new RequestParamShow("total,data");
+        return new ResponseShow(executeAction(ActionType.show, FuncName.ppp_package, param));
+    }
+
+    /**
+     * Get PPP Package List with custom param
+     *
+     * @param param Custom RequestParamShow
+     * @return PPP package list jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPPackages(RequestParamShow param) throws Exception {
+        return new ResponseShow(executeAction(ActionType.show, FuncName.ppp_package, param));
+    }
+
+    /**
+     * Add PPP Package
+     *
+     * @param pppPackage PPPPackage Object
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseAdd addPPPPackage(PPPPackage pppPackage) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.add, FuncName.ppp_package, pppPackage),
+                ResponseAdd.class
+        );
+    }
+
+    /**
+     * Edit PPP Package
+     *
+     * @param pppPackage PPPPackage Object
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseEdit editPPPPackage(PPPPackage pppPackage) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.edit, FuncName.ppp_package, pppPackage),
+                ResponseEdit.class
+        );
+    }
+
+    /**
+     * Down PPP Package by id
+     *
+     * @param id Target ID
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseDown downPPPPackage(int id) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.down, FuncName.ppp_package, new RequestParamDown(id)),
+                ResponseDown.class
+        );
+    }
+
+    /**
+     * Delete PPP Package by id
+     *
+     * @param id Target ID
+     * @return Response Object
+     * @throws Exception e
+     */
+    public ResponseDel delPPPPackage(int id) throws Exception {
+        return objectMapper.readValue(
+                executeAction(ActionType.del, FuncName.ppp_package, new RequestParamDel(id)),
+                ResponseDel.class
+        );
+    }
+
+    //================ OpenVPN Server Functions ==========================
+
+    /**
+     * Get OpenVPN Server Config
+     *
+     * @return OpenVPN server config jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getOpenVPNServerConfig() throws Exception {
+        RequestParamShow param = new RequestParamShow("data");
+        return new ResponseShow(executeAction(ActionType.show, FuncName.openvpn_server, param));
+    }
+
+    //================ PPPoE Server Functions ==========================
+
+    /**
+     * Get PPPoE Server Interface
+     *
+     * @return PPPoE server interface jsonString
+     * @throws Exception ex
+     */
+    public ResponseShow getPPPoEServerInterface() throws Exception {
+        RequestParamShow param = new RequestParamShow("interface");
+        return new ResponseShow(executeAction(ActionType.show, FuncName.pppoe_server, param));
+    }
+
+
     //================ Private Functions ==========================
 
     /**
@@ -739,17 +992,20 @@ public class RouterAgent {
                         ":" + port +
                         "/Action/call";
 
-        OkHttpClient okHttpClient = TrustAllCertOkHttpClient.getTrustAllCertOkHttpClient(cookieStore);
-
         MediaType JSONType = MediaType.parse("application/json; charset=utf-8");
 
         RequestInfo requestInfo = new RequestInfo(actionType, funcName);
         requestInfo.setParam(param);
 
-        RequestBody requestBody = RequestBody.create(
-                objectMapper.writeValueAsString(requestInfo),
-                JSONType
-        );
+        RequestBody requestBody;
+        try {
+            requestBody = RequestBody.create(
+                    objectMapper.writeValueAsString(requestInfo),
+                    JSONType
+            );
+        } catch (Exception e) {
+            throw new IkuaiRouterNetworkException("Failed to serialize request", e);
+        }
 
         Request request = new Request.Builder()
                 .url(url)
@@ -758,30 +1014,48 @@ public class RouterAgent {
 
         Call call = okHttpClient.newCall(request);
 
-        Response response = call.execute();
+        try (Response response = call.execute()) {
+            if (!response.isSuccessful()) {
+                throw new IkuaiRouterNetworkException("Error occurred when executeAction, HTTP status: " + response.code());
+            }
 
-        if (!response.isSuccessful()) {
-            throw new IkuaiRouterException("Error orrcued when executeAction");
+            ResponseBody body = response.body();
+            if (body == null) {
+                throw new IkuaiRouterNetworkException("Response body is null when executeAction");
+            }
+
+            String resp = body.string();
+
+            //预检查响应
+            IkuaiResponseBase responseBase = objectMapper.readValue(
+                    resp,
+                    new TypeReference<IkuaiResponseBase>() {
+                    }
+            );
+            //响应身份过期
+            if (responseBase.isAuthFail()) {
+                throw new IkuaiRouterAuthException(responseBase.getErrMsg());
+            }
+            //响应不成功
+            if (!responseBase.isSuccess()) {
+                throw new IkuaiRouterApiException(responseBase.getErrMsg(), responseBase.getResult());
+            }
+            return resp;
+        } catch (IkuaiRouterException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IkuaiRouterNetworkException("HTTP request failed", e);
         }
+    }
 
-        String resp = response.body().string();
-
-        response.close();
-
-        //预检查相应
-        IkuaiResponseBase responseBase = objectMapper.readValue(
-                resp,
-                new TypeReference<IkuaiResponseBase>() {
-                }
-        );
-//        //相应身份过期
-//        if (responseBase.isAuthFail()) {
-//            throw new IkuaiRouterNoAuthException(responseBase.getErrMsg());
-//        }
-        //响应不成功
-        if (!responseBase.isSuccess()) {
-            throw new IkuaiRouterException(responseBase.getErrMsg());
+    /**
+     * 主动清除内存中的密码
+     * 调用后此实例不可再次 login
+     */
+    public void destroy() {
+        if (this.pwd != null) {
+            java.util.Arrays.fill(this.pwd, '\0');
+            this.pwd = null;
         }
-        return resp;
     }
 }

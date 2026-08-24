@@ -7,25 +7,34 @@ import net.dabaiyun.ikuairouter.Action.*;
 import net.dabaiyun.ikuairouter.Entity.*;
 import net.dabaiyun.ikuairouter.Entity.sysstat.SystemStatus;
 import net.dabaiyun.ikuairouter.Exception.IkuaiRouterException;
+import net.dabaiyun.ikuairouter.Log.ConsoleIkuaiLogger;
+import net.dabaiyun.ikuairouter.Log.IkuaiLogger;
 import net.dabaiyun.ikuairouter.Util.IpAddrUtil;
 import okhttp3.Cookie;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class IkuaiRouter {
     //Tools
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    
+
     //Agent
     private RouterAgent routerAgent;
 
     //Status
     private boolean isLogin = false;
     private boolean debug = false;
+
+    //Concurrency
+    private final Object portLock = new Object();
+
+    //Logger
+    private IkuaiLogger logger = new ConsoleIkuaiLogger();
 
     //Construcs
 
@@ -66,7 +75,7 @@ public class IkuaiRouter {
         isLogin = login;
     }
 
-    public HashMap<String, List<Cookie>> getCookieStore() {
+    public Map<String, List<Cookie>> getCookieStore() {
         return routerAgent.getCookieStore();
     }
 
@@ -77,6 +86,30 @@ public class IkuaiRouter {
     public void setDebug(boolean debug) {
         this.debug = debug;
     }
+
+    /**
+     * 设置自定义日志实现
+     * 默认使用 ConsoleIkuaiLogger（stdout 输出）
+     * 生产环境建议注入 SLF4J 桥接实现
+     *
+     * @param logger 日志实现
+     */
+    public void setLogger(IkuaiLogger logger) {
+        this.logger = logger;
+    }
+
+    public IkuaiLogger getLogger() {
+        return logger;
+    }
+
+    /**
+     * 主动清除内存中的密码，释放敏感数据
+     * 调用后此实例不可再次 login
+     */
+    public void destroy() {
+        routerAgent.destroy();
+    }
+
 //================ Other Functions ==========================
 
 
@@ -122,112 +155,23 @@ public class IkuaiRouter {
      * @throws Exception ex
      */
     public boolean isWanPortInUse(String inter_face, int wanPort) throws Exception {
-        //获取所有端口映射配置条目
         List<NetMapping> netMappingList = this.getNetMappingList();
-        //遍历查找
-        for (NetMapping netMapping : netMappingList) {
-            //检查是否符合上行接口
-            List<String> interfaceList = Arrays.asList(netMapping.getInter_face().split(","));
-            if (!interfaceList.contains(inter_face)) {
-                //不符合上行接口的配置直接忽略
-//                    log("上行接口：" + netMapping.getInter_face() + " 不符合，跳过");
-                continue;
-            }
-            //对范围端口进行处理
-//            System.out.println("处理配置字符串：" + netMapping.getWan_port());
-            //按逗号分隔多段配置
-            String[] ports_str = netMapping.getWan_port().split(",");
-            //处理每一段端口
-            for (String s : ports_str) {
-//                System.out.println("处理配置字符串：" + s);
-                String[] portRange_str = s.split("-");
-                //如果是单个端口
-                if (portRange_str.length == 1) {
-//                    System.out.println("单个端口：" + portRange_str[0]);
-                    //判断是否和currentPort相同
-                    if (Integer.parseInt(portRange_str[0]) == wanPort) {
-//                        System.out.println("当前端口：" + wanPort + " 已使用");
-                        return true;
-                    }
-                }
-                //如果是端口范围
-                if (portRange_str.length == 2) {
-//                    System.out.println("范围端口：" + portRange_str[0] + " - " + portRange_str[1]);
-                    //当前端口处于范围内
-                    if ((wanPort >= Integer.parseInt(portRange_str[0]) && wanPort <= Integer.parseInt(portRange_str[1]))) {
-//                        System.out.println("当前端口：" + wanPort + " 已使用");
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+        Set<Integer> usedPorts = parseUsedPorts(netMappingList, Arrays.asList(inter_face));
+        return usedPorts.contains(wanPort);
     }
 
     /**
      * 查询公网端口是否被使用(多接口)
      *
      * @param interfaceList WAN接口
-     * @param wanPort    端口
+     * @param wanPort       端口
      * @return 是否被使用
      * @throws Exception ex
      */
     public boolean isWanPortInUseMultiInterface(List<String> interfaceList, int wanPort) throws Exception {
-        //获取所有端口映射配置条目
         List<NetMapping> netMappingList = this.getNetMappingList();
-        //遍历查找
-        for (NetMapping netMapping : netMappingList) {
-            log("遍历NetMapping:" + netMapping);
-            //检查是否符合上行接口
-            List<String> netMappingInterfaceList = Arrays.asList(netMapping.getInter_face().split(","));
-            log("NetMapping已使用接口：" + netMappingInterfaceList);
-            //上行接口有交集标记
-            boolean interfaceMatch = false;
-            //遍历接口，判断是否有交集
-            for (String toUseInterface : interfaceList) {
-                log("判断将要使用的接口：" + toUseInterface);
-                if (netMappingInterfaceList.contains(toUseInterface)) {
-                    log("NetMapping已使用接口" + toUseInterface + "交集标记置为true，跳出循环");
-                    interfaceMatch = true;
-                    break;
-                }else{
-                    log("NetMapping未使用接口" + toUseInterface);
-                }
-            }
-            //如果没有交集，跳过端口判断
-            if(!interfaceMatch) {
-                log("没有交集，跳过端口判断");
-                continue;
-            }
-            //对范围端口进行处理
-            log("处理配置字符串：" + netMapping.getWan_port());
-            //按逗号分隔多段配置
-            String[] ports_str = netMapping.getWan_port().split(",");
-            //处理每一段端口
-            for (String s : ports_str) {
-                log("处理配置字符串：" + s);
-                String[] portRange_str = s.split("-");
-                //如果是单个端口
-                if (portRange_str.length == 1) {
-                    log("单个端口：" + portRange_str[0]);
-                    //判断是否和currentPort相同
-                    if (Integer.parseInt(portRange_str[0]) == wanPort) {
-                        log("当前端口：" + wanPort + " 已使用");
-                        return true;
-                    }
-                }
-                //如果是端口范围
-                if (portRange_str.length == 2) {
-                    log("范围端口：" + portRange_str[0] + " - " + portRange_str[1]);
-                    //当前端口处于范围内
-                    if ((wanPort >= Integer.parseInt(portRange_str[0]) && wanPort <= Integer.parseInt(portRange_str[1]))) {
-                        log("当前端口：" + wanPort + " 已使用");
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+        Set<Integer> usedPorts = parseUsedPorts(netMappingList, interfaceList);
+        return usedPorts.contains(wanPort);
     }
 
     /**
@@ -240,171 +184,42 @@ public class IkuaiRouter {
      * @throws Exception 找不到可用端口
      */
     public int findAvailableNetMappingWanPort(String inter_face, int portbegin, int portend) throws Exception {
-        //端口合法性预处理
-        if (portbegin <= 0) {
-            portbegin = 1;
-        }
-        if (portend > 65535) {
-            portend = 65535;
-        }
-        boolean has_port = false;
-        int target_port = -1;
-        //获取所有端口映射配置条目
-        List<NetMapping> netMappingList = this.getNetMappingList();
-//        log("获取到NetMapping记录共 " + netMappingList.size() + " 个");
-        //遍历查找
-        for (int currentPort = portbegin; currentPort <= portend; currentPort++) {
-//            log("当前端口：" + currentPort);
-            //当前端口i是否被使用
-            boolean isInUse = false;
-            //遍历所有已存在配置项
-            for (NetMapping netMapping : netMappingList) {
-                //检查是否符合上行接口
-                List<String> interfaceList = Arrays.asList(netMapping.getInter_face().split(","));
-                if (!interfaceList.contains(inter_face)) {
-                    //不符合上行接口的配置直接忽略
-//                    log("上行接口：" + netMapping.getInter_face() + " 不符合，跳过");
-                    continue;
-                }
-                //对范围端口进行处理
-//                log("处理配置字符串：" + netMapping.getWan_port());
-                //按逗号分隔多段配置
-                String[] ports_str = netMapping.getWan_port().split(",");
-                //处理每一段端口
-                for (String s : ports_str) {
-//                    log("处理配置字符串：" + s);
-                    String[] portRange_str = s.split("-");
-                    //如果是单个端口
-                    if (portRange_str.length == 1) {
-//                        log("单个端口：" + portRange_str[0]);
-                        //判断是否和currentPort相同
-                        if (Integer.parseInt(portRange_str[0]) == currentPort) {
-//                            log("当前端口：" + currentPort + " 已使用");
-                            isInUse = true;
-                            break;
-                        }
-                    }
-                    //如果是端口范围
-                    if (portRange_str.length == 2) {
-//                        log("范围端口：" + portRange_str[0] + " - " + portRange_str[1]);
-                        //当前端口处于范围内
-                        if ((currentPort >= Integer.parseInt(portRange_str[0]) && currentPort <= Integer.parseInt(portRange_str[1]))) {
-//                            log("当前端口：" + currentPort + " 已使用");
-                            isInUse = true;
-                            break;
-                        }
-                    }
-                }
-                if (isInUse) {
-                    break;
+        synchronized (portLock) {
+            if (portbegin <= 0) portbegin = 1;
+            if (portend > 65535) portend = 65535;
+            List<NetMapping> netMappingList = this.getNetMappingList();
+            Set<Integer> usedPorts = parseUsedPorts(netMappingList, Arrays.asList(inter_face));
+            for (int port = portbegin; port <= portend; port++) {
+                if (!usedPorts.contains(port)) {
+                    return port;
                 }
             }
-            if (!isInUse) {
-                target_port = currentPort;
-                has_port = true;
-                break;
-            }
-        }
-        if (!has_port) {
             throw new IkuaiRouterException("No available port found.");
         }
-        return target_port;
     }
 
     /**
      * 查找可用公网端口(多接口)
      *
      * @param toUseInterfaceList 上行接口列表
-     * @param portbegin  起始端口
-     * @param portend    结束端口
+     * @param portbegin          起始端口
+     * @param portend            结束端口
      * @return int          找到的端口
      * @throws Exception 找不到可用端口
      */
     public int findAvailableNetMappingWanPortMultiInterface(List<String> toUseInterfaceList, int portbegin, int portend) throws Exception {
-        //端口合法性预处理
-        if (portbegin <= 0) {
-            portbegin = 1;
-        }
-        if (portend > 65535) {
-            portend = 65535;
-        }
-        boolean has_port = false;
-        int target_port = -1;
-        //获取所有端口映射配置条目
-        List<NetMapping> netMappingList = this.getNetMappingList();
-        log("获取到NetMapping记录共 " + netMappingList.size() + " 个");
-        //遍历查找
-        for (int currentPort = portbegin; currentPort <= portend; currentPort++) {
-            log("当前遍历端口：" + currentPort);
-            //当前端口是否被使用
-            boolean currentPortIsInUse = false;
-            //遍历所有已存在配置项
-            for (NetMapping netMapping : netMappingList) {
-                log("遍历NetMapping:" + netMapping);
-                //检查是否符合上行接口
-                List<String> netMappingInterfaceList = Arrays.asList(netMapping.getInter_face().split(","));
-                log("NetMapping已使用接口：" + netMappingInterfaceList);
-                //上行接口有交集标记
-                boolean interfaceMatch = false;
-                //遍历接口，判断是否有交集
-                for (String toUseInterface : toUseInterfaceList) {
-                    log("判断将要使用的接口：" + toUseInterface);
-                    if (netMappingInterfaceList.contains(toUseInterface)) {
-                        log("NetMapping已使用接口" + toUseInterface + "交集标记置为true，跳出循环");
-                        interfaceMatch = true;
-                        break;
-                    }else{
-                        log("NetMapping未使用接口" + toUseInterface);
-                    }
-                }
-                //如果没有交集，跳过端口判断
-                if(!interfaceMatch) {
-                    log("没有交集，跳过端口判断");
-                    continue;
-                }
-                //对范围端口进行处理
-                log("处理配置字符串：" + netMapping.getWan_port());
-                //按逗号分隔多段配置
-                String[] ports_str = netMapping.getWan_port().split(",");
-                //处理每一段端口
-                for (String s : ports_str) {
-                    log("处理每一个端口：" + s);
-                    String[] portRange_str = s.split("-");
-                    //如果是单个端口
-                    if (portRange_str.length == 1) {
-                        log("当前单个端口：" + portRange_str[0]);
-                        //判断是否和currentPort相同
-                        if (Integer.parseInt(portRange_str[0]) == currentPort) {
-                            log("当前端口：" + currentPort + " 已使用");
-                            currentPortIsInUse = true;
-                            break;
-                        }
-                    }
-                    //如果是端口范围
-                    if (portRange_str.length == 2) {
-                        log("范围端口：" + portRange_str[0] + " - " + portRange_str[1]);
-                        //当前端口处于范围内
-                        if ((currentPort >= Integer.parseInt(portRange_str[0]) && currentPort <= Integer.parseInt(portRange_str[1]))) {
-                            log("当前端口：" + currentPort + " 已使用");
-                            currentPortIsInUse = true;
-                            break;
-                        }
-                    }
-                }
-                if (currentPortIsInUse) {
-                    break;
+        synchronized (portLock) {
+            if (portbegin <= 0) portbegin = 1;
+            if (portend > 65535) portend = 65535;
+            List<NetMapping> netMappingList = this.getNetMappingList();
+            Set<Integer> usedPorts = parseUsedPorts(netMappingList, toUseInterfaceList);
+            for (int port = portbegin; port <= portend; port++) {
+                if (!usedPorts.contains(port)) {
+                    return port;
                 }
             }
-            if (!currentPortIsInUse) {
-                target_port = currentPort;
-                has_port = true;
-                break;
-            }
-        }
-        if (!has_port) {
             throw new IkuaiRouterException("No available port found.");
         }
-        return target_port;
     }
 
     /**
@@ -477,13 +292,13 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public String findAvailableIpAddr(String gateway, int netmaskBit, String ip_begin, String ip_end) throws Exception {
-        if (!IpAddrUtil.isIpVaild(gateway)) {
+        if (!IpAddrUtil.isIpValid(gateway)) {
             throw new IkuaiRouterException("gateway " + gateway + " invaild");
         }
-        if (!IpAddrUtil.isIpVaild(ip_begin)) {
+        if (!IpAddrUtil.isIpValid(ip_begin)) {
             throw new IkuaiRouterException("ip_begin " + ip_begin + " invaild");
         }
-        if (!IpAddrUtil.isIpVaild(ip_end)) {
+        if (!IpAddrUtil.isIpValid(ip_end)) {
             throw new IkuaiRouterException("ip_end " + ip_end + " invaild");
         }
         if (!IpAddrUtil.isMaskBitVaild(netmaskBit)) {
@@ -495,21 +310,19 @@ public class IkuaiRouter {
         if (!IpAddrUtil.isIpInRange(ip_end, gateway + "/" + netmaskBit)) {
             throw new IkuaiRouterException("ip_end " + ip_end + " not in CIDR:  " + gateway + "/" + netmaskBit);
         }
-        //获取当前系统已存在配置
+        //获取当前系统已存在配置，预建已用IP集合
         List<DHCPHost> dhcpHostList = this.getDHCPHostList();
-//        System.out.println("Getted DHCPHostList Length: " + dhcpHostList.getList().size());
         List<DHCPStatic> dhcpStaticList = this.getDHCPStaticList();
-//        System.out.println("Getted DHCPStaticList Length: " + dhcpStaticList.getList().size());
-        //最终结果IP
-        String result_ip = null;
-        boolean hasResult = false;
-//        //起始ip
-//        String ip_begin = IpAddrUtil.getBeginIpStr(gateway, netmaskBit);
-//        String ip_end = IpAddrUtil.getEndIpStr(gateway, netmaskBit);
+        Set<String> usedIps = new HashSet<>();
+        for (DHCPHost dhcpHost : dhcpHostList) {
+            usedIps.add(dhcpHost.getIp_addr());
+        }
+        for (DHCPStatic dhcpStatic : dhcpStaticList) {
+            usedIps.add(dhcpStatic.getIp_addr());
+        }
         //把ip分成4段
         String[] ipfromd = ip_begin.split("\\.");
         String[] iptod = ip_end.split("\\.");
-        //将字符串数组转换成int数组
         int[] int_ipf = new int[4];
         int[] int_ipt = new int[4];
         for (int i = 0; i < 4; i++) {
@@ -521,62 +334,15 @@ public class IkuaiRouter {
             for (int B = (A == int_ipf[0] ? int_ipf[1] : 0); B <= (A == int_ipt[0] ? int_ipt[1] : 255); B++) {
                 for (int C = (B == int_ipf[1] ? int_ipf[2] : 0); C <= (B == int_ipt[1] ? int_ipt[2] : 255); C++) {
                     for (int D = (C == int_ipf[2] ? int_ipf[3] : 0); D <= (C == int_ipt[2] ? int_ipt[3] : 255); D++) {
-                        //当前IP的字符串
                         String current_ip = A + "." + B + "." + C + "." + D;
-//                        System.out.println("current_ip: " + current_ip);
-                        //该ip是否已经被使用标记
-                        boolean isUsed = false;
-                        //检查是否有主机已使用该ip
-                        for (DHCPHost dhcpHost : dhcpHostList) {
-//                            System.out.println("current_dhcpHost: " + dhcpHost.getIp_addr());
-                            //如果已经被DHCPHost使用，则标记为已使用，并直接跳出循环
-                            if (dhcpHost.getIp_addr().equals(current_ip)) {
-//                                System.out.println("current_dhcpHost: " + dhcpHost.getIp_addr() + " already in use.");
-                                isUsed = true;
-                                break;
-                            }
+                        if (!usedIps.contains(current_ip)) {
+                            return current_ip;
                         }
-                        //如果当前查找的ip已经被标记为已使用，直接进入下一个IP
-                        if (isUsed) {
-                            continue;
-                        }
-                        //检查是否已经有该ip的静态分配
-                        for (DHCPStatic dhcpStatic : dhcpStaticList) {
-//                            System.out.println("current_dhcpStatic: " + dhcpStatic.getIp_addr());
-                            //如果已经被DHCPStatic使用，则标记为已使用，并直接跳出循环
-                            if (dhcpStatic.getIp_addr().equals(current_ip)) {
-//                                System.out.println("current_dhcpStatic: " + dhcpStatic.getIp_addr() + " already in use.");
-                                isUsed = true;
-                                break;
-                            }
-                        }
-                        //如果当前查找的ip已经被标记为已使用，直接进入下一个IP
-                        if (isUsed) {
-                            continue;
-                        }
-                        //如果都没有被使用，则直接选取本IP
-                        result_ip = current_ip;
-                        hasResult = true;
-                        break;
-                    }
-                    if (hasResult) {
-                        break;
                     }
                 }
-                if (hasResult) {
-                    break;
-                }
-            }
-            if (hasResult) {
-                break;
             }
         }
-
-        if (hasResult) {
-            return result_ip;
-        } else {
-            throw new IkuaiRouterException("No Available IpAddr");
-        }
+        throw new IkuaiRouterException("No Available IpAddr");
     }
 
     //================ Getter Functions ==========================
@@ -588,17 +354,9 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public SystemStatus getSystemStatus() throws Exception {
-        ResponseShow responseShow = routerAgent.getSystemStatus();
-//        if (responseShow.isAuthFail()) {
-//            throw new IkuaiRouterNoAuthException();
-//        }
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        if (!dataNode.has("sysstat")) {
-            throw new IkuaiRouterException("sysstat");
-        }
-        String arrStr = dataNode.get("sysstat").toString();
-        return objectMapper.readValue(
-                arrStr,
+        return parseData(
+                routerAgent.getSystemStatus(),
+                "sysstat",
                 new TypeReference<SystemStatus>() {
                 }
         );
@@ -657,15 +415,14 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public DHCPStatic getDHCPStaticById(int id) throws Exception {
-        ResponseShow responseShow = routerAgent.getDHCPStaticsById(String.valueOf(id));
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("static_data").toString();
-        List<DHCPStatic> dhcpStaticList = objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<DHCPStatic>>() {}
+        List<DHCPStatic> dhcpStaticList = parseData(
+                routerAgent.getDHCPStaticsById(String.valueOf(id)),
+                "static_data",
+                new TypeReference<List<DHCPStatic>>() {
+                }
         );
         for (DHCPStatic dhcpStatic : dhcpStaticList) {
-            if(dhcpStatic.getId() == id){
+            if (dhcpStatic.getId() == id) {
                 return dhcpStatic;
             }
         }
@@ -679,15 +436,14 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public DHCPStatic getDHCPStaticByIpAddr(String ip_addr) throws Exception {
-        ResponseShow responseShow = routerAgent.getDHCPStaticsByIpAddr(ip_addr);
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("static_data").toString();
-        List<DHCPStatic> dhcpStaticList = objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<DHCPStatic>>() {}
+        List<DHCPStatic> dhcpStaticList = parseData(
+                routerAgent.getDHCPStaticsByIpAddr(ip_addr),
+                "static_data",
+                new TypeReference<List<DHCPStatic>>() {
+                }
         );
         for (DHCPStatic dhcpStatic : dhcpStaticList) {
-            if(dhcpStatic.getIp_addr().equals(ip_addr)){
+            if (dhcpStatic.getIp_addr().equals(ip_addr)) {
                 return dhcpStatic;
             }
         }
@@ -701,15 +457,15 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public DHCPStatic getDHCPStaticByMAC(String mac) throws Exception {
-        ResponseShow responseShow = routerAgent.getDHCPStaticsByMac(mac);
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("static_data").toString();
-        List<DHCPStatic> dhcpStaticList = objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<DHCPStatic>>() {}
+        List<DHCPStatic> dhcpStaticList = parseData(
+                routerAgent.getDHCPStaticsByMac(mac),
+                "static_data",
+                new TypeReference<List<DHCPStatic>>() {
+                }
         );
+        ;
         for (DHCPStatic dhcpStatic : dhcpStaticList) {
-            if(dhcpStatic.getMac().equals(mac)){
+            if (dhcpStatic.getMac().equals(mac)) {
                 return dhcpStatic;
             }
         }
@@ -723,12 +479,11 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public QosLimit getQosLimitById(int id) throws Exception {
-        ResponseShow responseShow = routerAgent.getQosLimitById(String.valueOf(id));
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        List<QosLimit> qosLimitList = objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<QosLimit>>() {}
+        List<QosLimit> qosLimitList = parseData(
+                routerAgent.getQosLimitById(String.valueOf(id)),
+                "data",
+                new TypeReference<List<QosLimit>>() {
+                }
         );
         for (QosLimit qosLimit : qosLimitList) {
             if (qosLimit.getId() == id) {
@@ -745,12 +500,11 @@ public class IkuaiRouter {
      * @return Macthing Object
      */
     public QosLimit getQosLimitByIpAddr(String ip_addr) throws Exception {
-        ResponseShow responseShow = routerAgent.getQosLimitByIpAddr(ip_addr);
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        List<QosLimit> qosLimitList = objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<QosLimit>>() {}
+        List<QosLimit> qosLimitList = parseData(
+                routerAgent.getQosLimitByIpAddr(ip_addr),
+                "data",
+                new TypeReference<List<QosLimit>>() {
+                }
         );
         for (QosLimit qosLimit : qosLimitList) {
             if (qosLimit.getIp_addr().equals(ip_addr)) {
@@ -768,12 +522,11 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public NetMapping getNetMappingById(int id) throws Exception {
-        ResponseShow responseShow = routerAgent.getNetMappingById(String.valueOf(id));
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        List<NetMapping> netMappingList = objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<NetMapping>>(){}
+        List<NetMapping> netMappingList = parseData(
+                routerAgent.getNetMappingById(String.valueOf(id)),
+                "data",
+                new TypeReference<List<NetMapping>>() {
+                }
         );
         for (NetMapping netMapping : netMappingList) {
             if (netMapping.getId() == id) {
@@ -791,16 +544,15 @@ public class IkuaiRouter {
      * @throws Exception E
      */
     public List<NetMapping> getNetMappingListByIpAddr(String ip_addr) throws Exception {
-        ResponseShow responseShow = routerAgent.getNetMappingByIpAddr(ip_addr);
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        List<NetMapping> netMappingList = objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<NetMapping>>(){}
+        List<NetMapping> netMappingList = parseData(
+                routerAgent.getNetMappingByIpAddr(ip_addr),
+                "data",
+                new TypeReference<List<NetMapping>>() {
+                }
         );
         List<NetMapping> matchList = new ArrayList<>();
         for (NetMapping netMapping : netMappingList) {
-            if(netMapping.getLan_addr().equals(ip_addr)){
+            if (netMapping.getLan_addr().equals(ip_addr)) {
                 matchList.add(netMapping);
             }
         }
@@ -815,12 +567,11 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public NetMapping getNetMappingByInterfaceAndWanPort(String inter_face, String wanport) throws Exception {
-        ResponseShow responseShow = routerAgent.getNetMappingByWanPort(wanport);
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        List<NetMapping> netMappingList = objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<NetMapping>>() {}
+        List<NetMapping> netMappingList = parseData(
+                routerAgent.getNetMappingByWanPort(wanport),
+                "data",
+                new TypeReference<List<NetMapping>>() {
+                }
         );
         for (NetMapping netMapping : netMappingList) {
             if (netMapping.getWan_port().equals(wanport) && netMapping.getInter_face().equals(inter_face)) {
@@ -837,17 +588,35 @@ public class IkuaiRouter {
      * @throws Exception ex
      */
     public List<LanHostInfo> getLanHostInfoList() throws Exception {
-        ResponseShow responseShow = routerAgent.getLanHostStatus();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        if (!dataNode.has("data")) {
-            throw new IkuaiRouterException("data");
-        }
-        String arrStr = dataNode.get("data").toString();
-        return objectMapper.readValue(
-                arrStr,
+        return parseData(
+                routerAgent.getLanHostStatus(),
+                "data",
                 new TypeReference<List<LanHostInfo>>() {
                 }
         );
+    }
+
+    /**
+     * 分页获取全量 LanHostInfo 列表
+     * 通过 TYPE="data,total" 获取总数，循环翻页直到取完
+     *
+     * @param pageSize 每页数量
+     * @return 全量 LanHostInfo List
+     * @throws Exception ex
+     */
+    public List<LanHostInfo> getAllLanHostInfoList(int pageSize) throws Exception {
+        List<LanHostInfo> allData = new ArrayList<>();
+        int offset = 0;
+        int total;
+        do {
+            RequestParamShow param = new RequestParamShow("data,total", offset + "," + pageSize);
+            ResponseShow responseShow = routerAgent.getLanHostStatus(param);
+            total = getTotal(responseShow);
+            List<LanHostInfo> page = parseData(responseShow, "data", new TypeReference<List<LanHostInfo>>() {});
+            allData.addAll(page);
+            offset += pageSize;
+        } while (offset < total);
+        return allData;
     }
 
     /**
@@ -857,11 +626,9 @@ public class IkuaiRouter {
      * @throws Exception ex
      */
     public List<InterfaceLan> getInterfaceLanList() throws Exception {
-        ResponseShow responseShow = routerAgent.getInterfaceSnapshoot();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("snapshoot_lan").toString();
-        return objectMapper.readValue(
-                arrStr,
+        return parseData(
+                routerAgent.getInterfaceSnapshoot(),
+                "snapshoot_lan",
                 new TypeReference<List<InterfaceLan>>() {
                 }
         );
@@ -874,11 +641,9 @@ public class IkuaiRouter {
      * @throws Exception ex
      */
     public List<InterfaceWan> getInterfaceWanList() throws Exception {
-        ResponseShow responseShow = routerAgent.getInterfaceSnapshoot();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("snapshoot_wan").toString();
-        return objectMapper.readValue(
-                arrStr,
+        return parseData(
+                routerAgent.getInterfaceSnapshoot(),
+                "snapshoot_wan",
                 new TypeReference<List<InterfaceWan>>() {
                 }
         );
@@ -891,11 +656,9 @@ public class IkuaiRouter {
      * @throws Exception ex
      */
     public List<DHCPServer> getDHCPServerList() throws Exception {
-        ResponseShow responseShow = routerAgent.getDHCPServers();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        return objectMapper.readValue(
-                arrStr,
+        return parseData(
+                routerAgent.getDHCPServers(),
+                "data",
                 new TypeReference<List<DHCPServer>>() {
                 }
         );
@@ -908,11 +671,9 @@ public class IkuaiRouter {
      * @throws Exception ex
      */
     public List<DHCPStatic> getDHCPStaticList() throws Exception {
-        ResponseShow responseShow = routerAgent.getDHCPStatics();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("static_data").toString();
-        return objectMapper.readValue(
-                arrStr,
+        return parseData(
+                routerAgent.getDHCPStatics(),
+                "static_data",
                 new TypeReference<List<DHCPStatic>>() {
                 }
         );
@@ -925,11 +686,9 @@ public class IkuaiRouter {
      * @throws Exception ex
      */
     public List<DHCPHost> getDHCPHostList() throws Exception {
-        ResponseShow responseShow = routerAgent.getDHCPHosts();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        return objectMapper.readValue(
-                arrStr,
+        return parseData(
+                routerAgent.getDHCPHosts(),
+                "data",
                 new TypeReference<List<DHCPHost>>() {
                 }
         );
@@ -942,11 +701,9 @@ public class IkuaiRouter {
      * @throws Exception ex
      */
     public List<NetMapping> getNetMappingList() throws Exception {
-        ResponseShow responseShow = routerAgent.getNetMapping();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("data").toString();
-        return objectMapper.readValue(
-                arrStr,
+        return parseData(
+                routerAgent.getNetMapping(),
+                "data",
                 new TypeReference<List<NetMapping>>() {
                 }
         );
@@ -959,12 +716,11 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public List<InterfaceCheck> getInterfaceCheckList() throws Exception {
-        ResponseShow responseShow = routerAgent.getInterfaceCheckList();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("iface_check").toString();
-        return objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<InterfaceCheck>>() {}
+        return parseData(
+                routerAgent.getInterfaceCheckList(),
+                "iface_check",
+                new TypeReference<List<InterfaceCheck>>() {
+                }
         );
     }
 
@@ -975,12 +731,11 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public List<InterfaceStream> getInterfaceStreamList() throws Exception {
-        ResponseShow responseShow = routerAgent.getInterfaceStreamList();
-        JsonNode dataNode = objectMapper.readTree(responseShow.getData());
-        String arrStr = dataNode.get("iface_stream").toString();
-        return objectMapper.readValue(
-                arrStr,
-                new TypeReference<List<InterfaceStream>>() {}
+        return parseData(
+                routerAgent.getInterfaceStreamList(),
+                "iface_stream",
+                new TypeReference<List<InterfaceStream>>() {
+                }
         );
     }
 
@@ -1028,12 +783,68 @@ public class IkuaiRouter {
      * @throws Exception ErrMsg
      */
     public Integer addNetMapping(NetMapping netMapping) throws Exception {
-        ResponseAdd responseAdd = routerAgent.addNetMapping(netMapping);
-        if (responseAdd.isSuccess()) {
-            netMapping.setId(responseAdd.getRowId());
-            return responseAdd.getRowId();
-        } else {
-            throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+        synchronized (portLock) {
+            ResponseAdd responseAdd = routerAgent.addNetMapping(netMapping);
+            if (responseAdd.isSuccess()) {
+                netMapping.setId(responseAdd.getRowId());
+                return responseAdd.getRowId();
+            } else {
+                throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+            }
+        }
+    }
+
+
+    /**
+     * 查找可用端口并立即创建映射（原子操作）
+     * 注意：此同步仅保证单 JVM 实例内的原子性，多 JVM 场景需上层分布式锁
+     *
+     * @param inter_face 上行接口
+     * @param portbegin  起始端口
+     * @param portend    结束端口
+     * @param template   NetMapping 模板（wan_port 将被自动设置）
+     * @return 新行 ID
+     * @throws Exception 找不到可用端口或添加失败
+     */
+    public Integer findAndAddNetMapping(String inter_face, int portbegin, int portend, NetMapping template) throws Exception {
+        synchronized (portLock) {
+            int port = findAvailableNetMappingWanPort(inter_face, portbegin, portend);
+            template.setWan_port(String.valueOf(port));
+            template.setInter_face(inter_face);
+            ResponseAdd responseAdd = routerAgent.addNetMapping(template);
+            if (responseAdd.isSuccess()) {
+                template.setId(responseAdd.getRowId());
+                return responseAdd.getRowId();
+            } else {
+                throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+            }
+        }
+    }
+
+    /**
+     * 查找可用端口并立即创建映射 - 多接口版本（原子操作）
+     * 在多个接口上查找未被占用的端口，找到后立即创建映射
+     * 注意：此同步仅保证单 JVM 实例内的原子性，多 JVM 场景需上层分布式锁
+     *
+     * @param interfaceList 上行接口列表
+     * @param portbegin     起始端口
+     * @param portend       结束端口
+     * @param template      NetMapping 模板（wan_port 和 inter_face 将被自动设置）
+     turn 新行 ID
+     * @throws Exception 找不到可用端口或添加失败
+     */
+    public Integer findAndAddNetMappingMultiInterface(List<String> interfaceList, int portbegin, int portend, NetMapping template) throws Exception {
+        synchronized (portLock) {
+            int port = findAvailableNetMappingWanPortMultiInterface(interfaceList, portbegin, portend);
+            template.setWan_port(String.valueOf(port));
+            template.setInter_face(String.join(",", interfaceList));
+            ResponseAdd responseAdd = routerAgent.addNetMapping(template);
+            if (responseAdd.isSuccess()) {
+                template.setId(responseAdd.getRowId());
+                return responseAdd.getRowId();
+            } else {
+                throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+            }
         }
     }
 
@@ -1263,11 +1074,19 @@ public class IkuaiRouter {
      * @throws Exception
      */
     public boolean downNetMappingByLanIp(String lanip) throws Exception {
+        List<String> errors = new ArrayList<>();
         for (NetMapping netMapping : this.getNetMappingListByIpAddr(lanip)) {
-            IkuaiResponseBase response = routerAgent.downNetMapping(netMapping.getId());
-            if (!response.isSuccess()) {
-                throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
+            try {
+                IkuaiResponseBase response = routerAgent.downNetMapping(netMapping.getId());
+                if (!response.isSuccess()) {
+                    errors.add("id=" + netMapping.getId() + ": " + response.getResult() + " " + response.getErrMsg());
+                }
+            } catch (Exception e) {
+                errors.add("id=" + netMapping.getId() + ": " + e.getMessage());
             }
+        }
+        if (!errors.isEmpty()) {
+            throw new IkuaiRouterException("Partial failure in downNetMappingByLanIp: " + String.join("; ", errors));
         }
         return true;
     }
@@ -1394,27 +1213,353 @@ public class IkuaiRouter {
      * @throws Exception e
      */
     public boolean delNetMappingByIpAddr(String ip_addr) throws Exception {
+        List<String> errors = new ArrayList<>();
         for (NetMapping netMapping : this.getNetMappingListByIpAddr(ip_addr)) {
-            IkuaiResponseBase response =
-                    routerAgent.delNetMapping(netMapping.getId());
-            if (!response.isSuccess()) {
-                throw new IkuaiRouterException(response.getResult() + " " + response.getErrMsg());
+            try {
+                IkuaiResponseBase response =
+                        routerAgent.delNetMapping(netMapping.getId());
+                if (!response.isSuccess()) {
+                    errors.add("id=" + netMapping.getId() + ": " + response.getResult() + " " + response.getErrMsg());
+                }
+            } catch (Exception e) {
+                errors.add("id=" + netMapping.getId() + ": " + e.getMessage());
             }
         }
+        if (!errors.isEmpty()) {
+            throw new IkuaiRouterException("Partial failure in delNetMappingByIpAddr: " + String.join("; ", errors));
+        }
         return true;
+    }
+
+    //================ PPP User Functions ==========================
+
+    /**
+     * 获取 PPP 用户列表
+     *
+     * @return PPPUser List
+     * @throws Exception ex
+     */
+    public List<PPPUser> getPPPUserList() throws Exception {
+        return parseData(
+                routerAgent.getPPPUsers(),
+                "data",
+                new TypeReference<List<PPPUser>>() {
+                }
+        );
+    }
+
+    /**
+     * 分页获取全量 PPP 用户列表
+     *
+     * @param pageSize 每页数量
+     * @return 全量 PPPUser List
+     * @throws Exception ex
+     */
+    public List<PPPUser> getAllPPPUserList(int pageSize) throws Exception {
+        List<PPPUser> allData = new ArrayList<>();
+        int offset = 0;
+        int total;
+        do {
+            RequestParamShow param = new RequestParamShow("total,data", offset + "," + pageSize);
+            ResponseShow responseShow = routerAgent.getPPPUsers(param);
+            total = getTotal(responseShow);
+            List<PPPUser> page = parseData(responseShow, "data", new TypeReference<List<PPPUser>>() {});
+            allData.addAll(page);
+            offset += pageSize;
+        } while (offset < total);
+        return allData;
+    }
+
+    /**
+     * 根据 ID 获取 PPP 用户
+     *
+     * @param id Target ID
+     * @return PPPUser Object or null
+     * @throws Exception ex
+     */
+    public PPPUser getPPPUserById(int id) throws Exception {
+        RequestParamFind param = new RequestParamFind("data");
+        param.setFinds(RequestParamFind.FINDS_ID);
+        param.setKeywords(String.valueOf(id));
+        List<PPPUser> pppUserList = parseData(
+                routerAgent.getPPPUsers(param),
+                "data",
+                new TypeReference<List<PPPUser>>() {
+                }
+        );
+        for (PPPUser pppUser : pppUserList) {
+            if (pppUser.getId() == id) {
+                return pppUser;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据用户名获取 PPP 用户
+     *
+     * @param username 用户名
+     * @return PPPUser Object or null
+     * @throws Exception ex
+     */
+    public PPPUser getPPPUserByUsername(String username) throws Exception {
+        RequestParamFind param = new RequestParamFind("data");
+        param.setFinds("username");
+        param.setKeywords(username);
+        List<PPPUser> pppUserList = parseData(
+                routerAgent.getPPPUsers(param),
+                "data",
+                new TypeReference<List<PPPUser>>() {
+                }
+        );
+        for (PPPUser pppUser : pppUserList) {
+            if (pppUser.getUsername().equals(username)) {
+                return pppUser;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 添加 PPP 用户
+     *
+     * @param pppUser PPPUser Object
+     * @return NewRowId
+     * @throws Exception ErrMsg
+     */
+    public Integer addPPPUser(PPPUser pppUser) throws Exception {
+        ResponseAdd responseAdd = routerAgent.addPPPUser(pppUser);
+        if (responseAdd.isSuccess()) {
+            pppUser.setId(responseAdd.getRowId());
+            return responseAdd.getRowId();
+        } else {
+            throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+        }
+    }
+
+    /**
+     * 编辑 PPP 用户
+     *
+     * @param pppUser PPPUser Object
+     * @return 编辑是否成功
+     * @throws Exception ErrMsg
+     */
+    public boolean editPPPUser(PPPUser pppUser) throws Exception {
+        IkuaiResponseBase response = routerAgent.editPPPUser(pppUser);
+        return response.isSuccess();
+    }
+
+    /**
+     * 禁用 PPP 用户
+     *
+     * @param id Target ID
+     * @return 禁用是否成功
+     * @throws Exception ErrMsg
+     */
+    public boolean downPPPUserById(int id) throws Exception {
+        IkuaiResponseBase response = routerAgent.downPPPUser(id);
+        return response.isSuccess();
+    }
+
+    /**
+     * 删除 PPP 用户
+     *
+     * @param id Target ID
+     * @return 删除是否成功
+     * @throws Exception ErrMsg
+     */
+    public boolean delPPPUserById(int id) throws Exception {
+        IkuaiResponseBase response = routerAgent.delPPPUser(id);
+        return response.isSuccess();
+    }
+
+    //================ PPP Online Functions ==========================
+
+    /**
+     * 获取 PPP 在线用户列表
+     *
+     * @return PPPOnline List
+     * @throws Exception ex
+     */
+    public List<PPPOnline> getPPPOnlineList() throws Exception {
+        return parseData(
+                routerAgent.getPPPOnlineUsers(),
+                "data",
+                new TypeReference<List<PPPOnline>>() {
+                }
+        );
+    }
+
+    //================ PPP Package Functions ==========================
+
+    /**
+     * 获取 PPP 套餐列表
+     *
+     * @return PPPPackage List
+     * @throws Exception ex
+     */
+    public List<PPPPackage> getPPPPackageList() throws Exception {
+        return parseData(
+                routerAgent.getPPPPackages(),
+                "data",
+                new TypeReference<List<PPPPackage>>() {
+                }
+        );
+    }
+
+    /**
+     * 添加 PPP 套餐
+     *
+     * @param pppPackage PPPPackage Object
+     * @return NewRowId
+     * @throws Exception ErrMsg
+     */
+    public Integer addPPPPackage(PPPPackage pppPackage) throws Exception {
+        ResponseAdd responseAdd = routerAgent.addPPPPackage(pppPackage);
+        if (responseAdd.isSuccess()) {
+            pppPackage.setId(responseAdd.getRowId());
+            return responseAdd.getRowId();
+        } else {
+            throw new IkuaiRouterException(responseAdd.getResult() + " " + responseAdd.getErrMsg());
+        }
+    }
+
+    /**
+     * 编辑 PPP 套餐
+     *
+     * @param pppPackage PPPPackage Object
+     * @return 编辑是否成功
+     * @throws Exception ErrMsg
+     */
+    public boolean editPPPPackage(PPPPackage pppPackage) throws Exception {
+        IkuaiResponseBase response = routerAgent.editPPPPackage(pppPackage);
+        return response.isSuccess();
+    }
+
+    /**
+     * 删除 PPP 套餐
+     *
+     * @param id Target ID
+     * @return 删除是否成功
+     * @throws Exception ErrMsg
+     */
+    public boolean delPPPPackageById(int id) throws Exception {
+        IkuaiResponseBase response = routerAgent.delPPPPackage(id);
+        return response.isSuccess();
+    }
+
+    //================ OpenVPN Server Functions ==========================
+
+    /**
+     * 获取 OpenVPN Server 配置
+     *
+     * @return OpenVPNServer Object or null
+     * @throws Exception ex
+     */
+    public OpenVPNServer getOpenVPNServerConfig() throws Exception {
+        List<OpenVPNServer> list = parseData(
+                routerAgent.getOpenVPNServerConfig(),
+                "data",
+                new TypeReference<List<OpenVPNServer>>() {
+                }
+        );
+        return list != null && !list.isEmpty() ? list.get(0) : null;
     }
 
     //================ Private Functions ==========================
 
     /**
+     * 从 ResponseShow 中解析 total 字段
+     *
+     * @param response ResponseShow 响应对象
+     * @return total 值，如果不存在返回 -1
+     * @throws Exception e
+     */
+    private int getTotal(ResponseShow response) throws Exception {
+        JsonNode dataNode = objectMapper.readTree(response.getData());
+        JsonNode totalNode = dataNode.get("total");
+        return totalNode != null ? totalNode.asInt() : -1;
+    }
+
+    /**
+     * 统一解析 ResponseShow 中的 JSON 数据
+     *
+     * @param response ResponseShow 响应对象
+     * @param dataKey  JSON 数据中的 key（如 "data", "static_data", "sysstat" 等）
+     * @param type     目标类型的 TypeReference
+     * @param <T>      返回类型
+     * @return 反序列化后的对象
+     * @throws Exception e
+     */
+    private <T> T parseData(ResponseShow response, String dataKey, TypeReference<T> type) throws Exception {
+        JsonNode dataNode = objectMapper.readTree(response.getData());
+        JsonNode targetNode = dataNode.get(dataKey);
+        if (targetNode == null) {
+            throw new IkuaiRouterException("Response missing expected key: " + dataKey);
+        }
+        return objectMapper.readValue(targetNode.toString(), type);
+    }
+
+    /**
+     * 解析端口映射列表中，匹配指定接口的所有已占用端口
+     *
+     * @param netMappingList   端口映射规则列表
+     * @param targetInterfaces 目标接口列表（有交集即匹配）
+     * @return 已占用端口集合
+     */
+    private Set<Integer> parseUsedPorts(List<NetMapping> netMappingList, List<String> targetInterfaces) {
+        Set<Integer> usedPorts = new HashSet<>();
+        for (NetMapping netMapping : netMappingList) {
+            // 检查接口是否有交集
+            List<String> mappingInterfaces = Arrays.asList(netMapping.getInter_face().split(","));
+            boolean interfaceMatch = false;
+            for (String target : targetInterfaces) {
+                if (mappingInterfaces.contains(target)) {
+                    interfaceMatch = true;
+                    break;
+                }
+            }
+            if (!interfaceMatch) {
+                continue;
+            }
+            // 解析 wan_port 字段，加入 usedPorts
+            parseWanPortInto(usedPorts, netMapping.getWan_port());
+        }
+        return usedPorts;
+    }
+
+    /**
+     * 解析 wan_port 字段（支持 "8080"、"8000-8010"、"8000,9000-9010"）
+     *
+     * @param usedPorts   已占用端口集合（结果写入此集合）
+     * @param wanPortSpec wan_port 字段值
+     */
+    private void parseWanPortInto(Set<Integer> usedPorts, String wanPortSpec) {
+        String[] segments = wanPortSpec.split(",");
+        for (String segment : segments) {
+            String[] range = segment.split("-");
+            if (range.length == 1) {
+                usedPorts.add(Integer.parseInt(range[0]));
+            } else if (range.length == 2) {
+                int start = Integer.parseInt(range[0]);
+                int end = Integer.parseInt(range[1]);
+                for (int p = start; p <= end; p++) {
+                    usedPorts.add(p);
+                }
+            }
+        }
+    }
+
+    /**
      * 日志打印
+     *
      * @param msg 日志内容
      */
     private void log(String msg) {
         if (debug) {
-            System.out.println(msg);
+            logger.debug(msg);
         }
     }
-    
-    
+
+
 }

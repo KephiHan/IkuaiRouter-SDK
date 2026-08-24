@@ -4,7 +4,7 @@ package net.dabaiyun.ikuairouter.Entity.sysstat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Online_user {
+public class OnlineUser {
 
     private int count;
     private int count_2g;
@@ -54,7 +54,7 @@ public class Online_user {
 
     @Override
     public String toString() {
-        return "Online_user{" +
+        return "OnlineUser{" +
                 "count=" + count +
                 ", count_2g=" + count_2g +
                 ", count_5g=" + count_5g +

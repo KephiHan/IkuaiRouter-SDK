@@ -17,7 +17,7 @@ public class IpAddrUtil {
      * 格式：getIpRangeByIpAndMask("192.192.192.1", "23")
      */
     public static List<String> getIpRangeByIpAndMask(String ip, int mask) throws IkuaiRouterException {
-        if(!isIpVaild(ip)){
+        if(!isIpValid(ip)){
             throw new IkuaiRouterException("IP非法");
         }
         List<String> list = new ArrayList<>();
@@ -43,7 +43,7 @@ public class IpAddrUtil {
      * 格式：getIpRangeAllIp("192.192.192.1","192.192.193.128")
      */
     public static List<String> getIpRangeAllIp(String ipfrom, String ipto) throws IkuaiRouterException {
-        if(!isIpVaild(ipfrom) || !isIpVaild(ipto)){
+        if(!isIpValid(ipfrom) || !isIpValid(ipto)){
             throw new IkuaiRouterException("IP非法");
         }
         List<String> ips = new ArrayList<String>();
@@ -89,7 +89,7 @@ public class IpAddrUtil {
      * @return
      */
     public static Long parseIpFromStringToLong(String ip) throws IkuaiRouterException {
-        if(!isIpVaild(ip)){
+        if(!isIpValid(ip)){
             throw new IkuaiRouterException("IP非法");
         }
         Long ipLong = 0L;
@@ -115,7 +115,7 @@ public class IpAddrUtil {
      * @return 起始IP的字符串表示
      */
     public static String getBeginIpStr(String ip, int maskBit) throws IkuaiRouterException {
-        if(!isIpVaild(ip)){
+        if(!isIpValid(ip)){
             throw new IkuaiRouterException("IP非法");
         }
         return parseIpFromLongToString(getBeginIpLong(ip, maskBit));
@@ -129,7 +129,7 @@ public class IpAddrUtil {
      * @return 起始IP的长整型表示
      */
     public static Long getBeginIpLong(String ip, int maskBit) throws IkuaiRouterException {
-        if(!isIpVaild(ip)){
+        if(!isIpValid(ip)){
             throw new IkuaiRouterException("IP非法");
         }
         return parseIpFromStringToLong(ip) & parseIpFromStringToLong(parseMaskBitToMask(maskBit));
@@ -143,7 +143,7 @@ public class IpAddrUtil {
      * @return 终止IP的字符串表示
      */
     public static String getEndIpStr(String ip, int maskBit) throws IkuaiRouterException {
-        if(!isIpVaild(ip)){
+        if(!isIpValid(ip)){
             throw new IkuaiRouterException("IP非法");
         }
         return parseIpFromLongToString(getEndIpLong(ip, maskBit));
@@ -158,7 +158,7 @@ public class IpAddrUtil {
      * @return 终止IP的长整型表示
      */
     public static Long getEndIpLong(String ip, int maskBit) throws IkuaiRouterException {
-        if(!isIpVaild(ip)){
+        if(!isIpValid(ip)){
             throw new IkuaiRouterException("IP非法");
         }
         return getBeginIpLong(ip, maskBit) + ~parseIpFromStringToLong(parseMaskBitToMask(maskBit));
@@ -233,7 +233,7 @@ public class IpAddrUtil {
     }
 
     public static double ipToDouble(String ip) throws IkuaiRouterException {
-        if(!isIpVaild(ip)){
+        if(!isIpValid(ip)){
             throw new IkuaiRouterException("IP非法");
         }
         String[] arr = ip.split("\\.");
@@ -250,7 +250,7 @@ public class IpAddrUtil {
      * 格式：isInRange("192.168.8.3", "192.168.9.10/22");
      */
     public static boolean isIpInRange(String ip, String cidr) throws IkuaiRouterException {
-        if(!isIpVaild(ip)){
+        if(!isIpValid(ip)){
             throw new IkuaiRouterException("IP非法");
         }
         String[] ips = ip.split("\\.");
@@ -291,7 +291,7 @@ public class IpAddrUtil {
      * <p>
      * 格式：isIP("192.192.192.1")
      */
-    public static boolean isIpVaild(String str) {
+    public static boolean isIpValid(String str) {
         Pattern pattern = Pattern.compile("^(((\\d{1,2})|(1\\d{2})|(2[0-4]\\d)|(25[0-5]))\\.){3}((\\d{1,2})|(1\\d{2})|(2[0-4]\\d)|(25[0-5]))$");
         return pattern.matcher(str).matches();
     }
